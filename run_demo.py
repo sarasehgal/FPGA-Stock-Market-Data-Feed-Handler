@@ -80,6 +80,7 @@ print("  Press Ctrl+C to stop\n", flush=True)
 import random
 from scapy.all import Ether, Raw, sendp
 
+MT_QUOTE, MT_TRADE, MT_CANCEL, MT_HALT, MT_HB = 1, 2, 3, 4, 5
 SYMBOLS_DATA = [
     (b'AAPL', 115000), (b'MSFT', 195000), (b'NVDA', 880000), (b'TSLA', 490000),
     (b'AMZN', 175000), (b'GOOG', 165000), (b'META', 490000), (b'NFLX', 640000),
@@ -90,12 +91,24 @@ total = 0
 try:
     while True:
         sym, _ = random.choice(SYMBOLS_DATA)
-        prices[sym] = max(10000, prices[sym] + random.randint(-2000, 2500))
-        qty = random.randint(10, 500)
-        side = random.randint(0, 1)
         seq = (seq + 1) & 0xFFFF
         if seq == 0: seq = 1
-        payload = struct.pack('>B4sIHHB', 1, sym, prices[sym], qty, seq, side)
+        r = random.random()
+        if r < 0.80:
+            mt = MT_QUOTE
+            prices[sym] = max(10000, prices[sym] + random.randint(-2000, 2500))
+            price, qty, side = prices[sym], random.randint(10, 500), random.randint(0, 1)
+        elif r < 0.90:
+            mt = MT_TRADE
+            price = max(10000, prices[sym] + random.randint(-1000, 1000))
+            qty, side = random.randint(1, 200), random.randint(0, 1)
+        elif r < 0.94:
+            mt, price, qty, side = MT_CANCEL, 0, 0, 0
+        elif r < 0.97:
+            mt, price, qty, side = MT_HALT, 0, 0, 0
+        else:
+            mt, price, qty, side = MT_HB, 0, 0, 0
+        payload = struct.pack('>B4sIHHB', mt, sym, price, qty, seq, side)
         payload += bytes([sum(payload) % 256])
         sendp(Ether(dst='ff:ff:ff:ff:ff:ff', src='d4:a2:cd:1c:a9:0b', type=0x88B5)/Raw(load=payload),
               iface=IFACE, verbose=False)

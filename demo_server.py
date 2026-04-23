@@ -54,13 +54,18 @@ def parse_trigger(line):
             return None
         sym = parts[1]
         price = int(parts[2], 16)
-        side = parts[3]
+        reason_code = parts[3]
         latency_cycles = int(parts[4], 16) if len(parts) > 4 else 0
         latency_ns = latency_cycles * 10  # 100 MHz = 10ns per cycle
+        # Reason codes: T=bid_thresh, t=ask_thresh, E=ema_bid, e=ema_ask, S=spread
+        reason_map = {"T":"THRESH","t":"THRESH","E":"EMA","e":"EMA","S":"SPREAD","b":"THRESH","a":"THRESH"}
+        side_map = {"T":"bid","t":"ask","E":"bid","e":"ask","S":"spread","b":"bid","a":"ask"}
         return {
             "sym": sym,
             "price": price,
-            "side": side,
+            "side": side_map.get(reason_code, "?"),
+            "reason": reason_map.get(reason_code, "?"),
+            "reason_code": reason_code,
             "lat_ns": latency_ns,
             "lat_cycles": latency_cycles,
             "ts": int(time.time() * 1000),

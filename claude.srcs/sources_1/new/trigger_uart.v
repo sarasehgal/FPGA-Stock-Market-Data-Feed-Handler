@@ -59,7 +59,12 @@ always @* begin
         5'd18: cur_byte = hex_nibble(price_lat[7:4]);
         5'd19: cur_byte = hex_nibble(price_lat[3:0]);
         5'd20: cur_byte = ":";
-        5'd21: cur_byte = (reason_lat == 8'd2) ? "a" : "b";
+        // Reason: 1=bid_thresh(T), 2=ask_thresh(t), 3=ema_bid(E), 4=ema_ask(e), 5=spread(S)
+        5'd21: cur_byte = (reason_lat == 8'd1) ? "T" :
+                           (reason_lat == 8'd2) ? "t" :
+                           (reason_lat == 8'd3) ? "E" :
+                           (reason_lat == 8'd4) ? "e" :
+                           (reason_lat == 8'd5) ? "S" : "?";
         5'd22: cur_byte = ":";
         5'd23: cur_byte = hex_nibble(lat_lat[15:12]);
         5'd24: cur_byte = hex_nibble(lat_lat[11:8]);

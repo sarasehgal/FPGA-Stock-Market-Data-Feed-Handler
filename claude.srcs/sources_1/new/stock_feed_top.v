@@ -476,6 +476,9 @@ trigger_engine #(
     .update_seq_num   (book_update_seq_num),
     .update_side      (book_update_side),
 
+    .best_bid         (best_bid_w),
+    .best_ask         (best_ask_w),
+
     .symbol_halted    (symbol_halted),
 
     .trigger_valid      (trig_valid_w),

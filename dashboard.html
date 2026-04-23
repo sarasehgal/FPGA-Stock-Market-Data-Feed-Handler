@@ -108,6 +108,9 @@ canvas { width:100%!important; height:100%!important; }
       <div class="stat-box"><div class="val" id="statLatMin">--</div><div class="label">Min Latency</div></div>
       <div class="stat-box"><div class="val" id="statLatMax">--</div><div class="label">Max Latency</div></div>
       <div class="stat-box"><div class="val" id="statSymbols">0</div><div class="label">Symbols Seen</div></div>
+      <div class="stat-box"><div class="val" id="statThresh" style="color:#00ff88">0</div><div class="label">Threshold</div></div>
+      <div class="stat-box"><div class="val" id="statEMA" style="color:#f39c12">0</div><div class="label">EMA Cross</div></div>
+      <div class="stat-box"><div class="val" id="statSpread" style="color:#e74c3c">0</div><div class="label">Spread Alert</div></div>
     </div>
     <!-- Latency histogram -->
     <h2 style="margin-top:12px">Latency Distribution</h2>
@@ -168,8 +171,10 @@ function connect() {
 }
 connect();
 
+let reasonCounts = {THRESH:0, EMA:0, SPREAD:0};
+
 function handleTrigger(msg) {
-  const {sym, price, side, ts, lat_ns} = msg;
+  const {sym, price, side, ts, lat_ns, reason} = msg;
   if (!sym || !price) return;
 
   trigCount++;
@@ -179,6 +184,7 @@ function handleTrigger(msg) {
   recentRate.push(Date.now());
   if (lat_ns > 0) { latencies.push(lat_ns); if (latencies.length > 1000) latencies.shift(); }
   if (perSymbolCount[sym] !== undefined) perSymbolCount[sym]++;
+  if (reason && reasonCounts[reason] !== undefined) reasonCounts[reason]++;
 
   if (priceHistory[sym]) {
     priceHistory[sym].push({t: Date.now(), price});
@@ -190,10 +196,10 @@ function handleTrigger(msg) {
   const div = document.createElement('div');
   div.className = 'feed-item';
   const timeStr = new Date(ts).toLocaleTimeString();
-  const sideStr = side === 'a' ? 'ASK' : 'BID';
-  const sideClass = side === 'a' ? 'ask' : 'bid';
+  const reasonColors = {THRESH:'#00ff88', EMA:'#f39c12', SPREAD:'#e74c3c'};
+  const rc = reason || 'THRESH';
   const latStr = lat_ns > 0 ? `${(lat_ns/1000).toFixed(1)}us` : '';
-  div.innerHTML = `<span class="ts">${timeStr}</span><span class="sym">${sym}</span><span class="fprice">$${(price/10000).toFixed(2)}</span><span class="side ${sideClass}">${sideStr}</span><span class="lat">${latStr}</span>`;
+  div.innerHTML = `<span class="ts">${timeStr}</span><span class="sym">${sym}</span><span class="fprice">$${(price/10000).toFixed(2)}</span><span style="color:${reasonColors[rc]||'#888'};min-width:50px;font-size:10px">${rc}</span><span class="side ${side==='ask'?'ask':'bid'}">${side}</span><span class="lat">${latStr}</span>`;
   feed.prepend(div);
   while (feed.children.length > 80) feed.lastChild.remove();
 }
@@ -213,6 +219,9 @@ setInterval(() => {
   document.getElementById('statTotal').textContent = trigCount.toLocaleString();
   document.getElementById('statRate').textContent = rate;
   document.getElementById('statSymbols').textContent = symbolsSeen.size;
+  document.getElementById('statThresh').textContent = reasonCounts.THRESH;
+  document.getElementById('statEMA').textContent = reasonCounts.EMA;
+  document.getElementById('statSpread').textContent = reasonCounts.SPREAD;
 
   if (latencies.length > 0) {
     const avg = latencies.reduce((a,b)=>a+b,0)/latencies.length;
