@@ -4,262 +4,357 @@
 <meta charset="UTF-8">
 <title>FPGA Stock Feed - Live Dashboard</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#0a0a1a; color:#e0e0e0; font-family:'Segoe UI',sans-serif; height:100vh; display:flex; flex-direction:column; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#e0e0e0;font-family:'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow-y:auto}
 
-.header { display:flex; justify-content:space-between; align-items:center; background:#111128; padding:10px 20px; border-bottom:1px solid #333; flex-shrink:0; }
-.header h1 { font-size:18px; color:#00ff88; }
-.header .stats { font-size:13px; font-family:monospace; }
-.dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
-.dot.live { background:#00ff88; animation:pulse 1.5s infinite; }
-.dot.dead { background:#ff4444; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.header{display:flex;justify-content:space-between;align-items:center;background:#111128;padding:8px 20px;border-bottom:1px solid #333;flex-shrink:0}
+.header h1{font-size:16px;color:#00ff88}
+.header .stats{font-size:12px;font-family:monospace}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.dot.live{background:#00ff88;animation:pulse 1.5s infinite}
+.dot.dead{background:#f44}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-.main { display:flex; flex:1; min-height:0; }
-.left { flex:1; display:flex; flex-direction:column; border-right:1px solid #222; }
-.right { width:420px; display:flex; flex-direction:column; }
+#banner{display:none;padding:6px 20px;font-size:13px;font-weight:700;text-align:center;border-bottom:1px solid #333;flex-shrink:0}
 
-.section { padding:10px 14px; border-bottom:1px solid #1a1a2e; }
-.section h2 { font-size:11px; color:#666; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+.main{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:380px 300px;gap:6px;padding:6px}
 
-/* Price table */
-table { width:100%; border-collapse:collapse; font-size:12px; }
-th { text-align:left; color:#555; font-weight:normal; padding:3px 6px; }
-td { padding:4px 6px; border-bottom:1px solid #111; }
-.sym { color:#4a90d9; font-weight:600; }
-.above { color:#00ff88; }
-.below { color:#888; }
-.bar { background:#1a1a2e; height:10px; border-radius:3px; position:relative; }
-.bar-fill { height:100%; border-radius:3px; transition:width .3s; }
-.bar-mark { position:absolute; top:0; bottom:0; width:2px; background:#f44; }
+.panel{background:#111128;border-radius:6px;border:1px solid #1a1a2e;padding:8px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel h2{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;flex-shrink:0}
+.wide{grid-column:span 2}
+
+/* Stats row */
+.stat-row{display:flex;gap:4px;flex-shrink:0;padding:4px 6px}
+.sbox{background:#1a1a2e;border-radius:4px;padding:4px 6px;text-align:center;flex:1}
+.sbox .v{font-size:16px;font-weight:700;color:#00ff88;font-family:monospace}
+.sbox .l{font-size:8px;color:#555}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;color:#444;font-weight:normal;padding:2px 4px;font-size:10px}
+td{padding:3px 4px;border-bottom:1px solid #0d0d20}
+.sym{color:#4a90d9;font-weight:600}
+.above{color:#00ff88}.below{color:#666}
+.bar{background:#1a1a2e;height:8px;border-radius:2px;position:relative}
+.bar-fill{height:100%;border-radius:2px;transition:width .3s}
+.bar-mark{position:absolute;top:0;bottom:0;width:2px;background:#f44}
 
 /* Feed */
-.feed { flex:1; overflow-y:auto; font-family:monospace; font-size:11px; padding:8px 14px; min-height:0; }
-.feed div { padding:2px 0; border-bottom:1px solid #0d0d20; animation:fadeIn .2s; }
-@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.feed{flex:1;overflow-y:auto;font-family:monospace;font-size:10px;min-height:0}
+.feed::-webkit-scrollbar{width:3px}
+.feed::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.feed div{padding:1px 0;border-bottom:1px solid #080818;animation:fadeIn .15s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-/* Chart */
-.chart-box { flex:1; min-height:0; padding:8px; }
-canvas { width:100%; height:100%; display:block; }
+/* Canvas */
+.chart-box{flex:1;min-height:0}
+canvas{width:100%;height:100%;display:block}
 
-/* Stat boxes */
-.stat-row { display:flex; gap:6px; padding:8px 14px; flex-wrap:wrap; }
-.sbox { background:#1a1a2e; border-radius:5px; padding:6px 10px; text-align:center; flex:1; min-width:80px; }
-.sbox .v { font-size:18px; font-weight:700; color:#00ff88; font-family:monospace; }
-.sbox .l { font-size:9px; color:#555; }
+/* Heatmap */
+.heatmap{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;flex:1}
+.hm-cell{border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;transition:background .5s}
+.hm-cell .hm-sym{font-weight:700;font-size:11px}
+.hm-cell .hm-cnt{font-family:monospace;font-size:14px;font-weight:700}
 
-#debug { color:#ff0; font-size:10px; padding:2px 14px; background:#1a0a0a; display:none; }
+/* Donut */
+.donut-wrap{display:flex;align-items:center;justify-content:center;gap:15px;flex:1}
+.donut-legend{font-size:11px}
+.donut-legend div{margin:4px 0;display:flex;align-items:center;gap:6px}
+.donut-legend .dot-lg{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* Order book */
+.ob-row{display:flex;align-items:center;margin:2px 0;font-size:10px;font-family:monospace}
+.ob-sym{width:40px;color:#4a90d9;font-weight:600}
+.ob-bars{flex:1;display:flex;height:12px}
+.ob-bid{background:#2ecc71;height:100%;border-radius:2px 0 0 2px;transition:width .3s}
+.ob-ask{background:#e74c3c;height:100%;border-radius:0 2px 2px 0;transition:width .3s}
+.ob-mid{width:2px;background:#333}
+.ob-price{width:50px;text-align:right;font-size:9px;color:#888}
 </style>
 </head>
 <body>
-
 <div class="header">
-  <h1>FPGA Stock Feed Pipeline</h1>
+  <h1>FPGA Stock Feed Pipeline — Live</h1>
   <div class="stats">
-    <span class="dot dead" id="dot"></span>
-    <span id="conn">Connecting...</span> |
-    Triggers: <b id="hdrCount">0</b> |
-    Rate: <b id="hdrRate">0</b>/s |
-    Latency: <b id="hdrLat">--</b>
+    <span class="dot dead" id="dot"></span><span id="conn">Connecting...</span> |
+    Triggers: <b id="hdrCount">0</b> | Rate: <b id="hdrRate">0</b>/s | Latency: <b id="hdrLat">--</b>
   </div>
 </div>
-
-<div id="debug"></div>
+<div id="banner"></div>
 
 <div class="stat-row">
-  <div class="sbox"><div class="v" id="sTotal">0</div><div class="l">Total</div></div>
+  <div class="sbox"><div class="v" id="sTotal">0</div><div class="l">Triggers</div></div>
   <div class="sbox"><div class="v" id="sRate">0</div><div class="l">Rate/s</div></div>
   <div class="sbox"><div class="v" id="sLatAvg">--</div><div class="l">Avg Lat</div></div>
   <div class="sbox"><div class="v" id="sLatMin">--</div><div class="l">Min Lat</div></div>
   <div class="sbox"><div class="v" id="sSyms">0</div><div class="l">Symbols</div></div>
-  <div class="sbox"><div class="v" id="sThresh" style="color:#00ff88">0</div><div class="l">Threshold</div></div>
-  <div class="sbox"><div class="v" id="sEMA" style="color:#f39c12">0</div><div class="l">EMA Cross</div></div>
-  <div class="sbox"><div class="v" id="sSpread" style="color:#e74c3c">0</div><div class="l">Spread</div></div>
+  <div class="sbox"><div class="v" id="sThresh" style="color:#0f8">0</div><div class="l">THRESH</div></div>
+  <div class="sbox"><div class="v" id="sEMA" style="color:#f90">0</div><div class="l">EMA</div></div>
+  <div class="sbox"><div class="v" id="sSpread" style="color:#f44">0</div><div class="l">SPREAD</div></div>
 </div>
 
 <div class="main">
-  <div class="left">
-    <div class="section">
-      <h2>Live Prices vs Thresholds</h2>
-      <table>
-        <thead><tr><th>Symbol</th><th>Price</th><th>Threshold</th><th style="width:30%">Level</th></tr></thead>
-        <tbody id="prices"></tbody>
-      </table>
-    </div>
-    <div class="chart-box">
-      <canvas id="chart"></canvas>
+  <!-- Row 1: Prices | Heatmap + Donut | Feed -->
+  <div class="panel">
+    <h2>Live Prices vs Thresholds</h2>
+    <table><thead><tr><th>Sym</th><th>Price</th><th>Thresh</th><th style="width:30%">Level</th></tr></thead><tbody id="prices"></tbody></table>
+    <h2 style="margin-top:6px">Order Book Depth</h2>
+    <div id="orderbook"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Trigger Heatmap by Symbol</h2>
+    <div class="heatmap" id="heatmap"></div>
+    <h2 style="margin-top:6px">Strategy Breakdown</h2>
+    <div class="donut-wrap">
+      <canvas id="donut" width="100" height="100"></canvas>
+      <div class="donut-legend" id="donutLeg"></div>
     </div>
   </div>
-  <div class="right">
-    <div class="section"><h2>Trigger Feed (live)</h2></div>
+
+  <div class="panel">
+    <h2>Trigger Feed</h2>
     <div class="feed" id="feed"></div>
+  </div>
+
+  <!-- Row 2: Price Chart (wide) | Latency Histogram -->
+  <div class="panel wide">
+    <h2>Price History (60s)</h2>
+    <div class="chart-box"><canvas id="chart"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>Latency Distribution (FPGA Determinism)</h2>
+    <div class="chart-box"><canvas id="latChart"></canvas></div>
   </div>
 </div>
 
 <script>
-const SYM = {
-  AAPL:{th:120000,c:'#4a90d9'}, MSFT:{th:200000,c:'#e74c3c'}, NVDA:{th:900000,c:'#2ecc71'},
-  TSLA:{th:500000,c:'#f39c12'}, AMZN:{th:180000,c:'#9b59b6'}, GOOG:{th:170000,c:'#1abc9c'},
-  META:{th:500000,c:'#e67e22'}, NFLX:{th:650000,c:'#e84393'}
+const SYM={
+  AAPL:{th:120000,c:'#4a90d9'},MSFT:{th:200000,c:'#e74c3c'},NVDA:{th:900000,c:'#2ecc71'},
+  TSLA:{th:500000,c:'#f39c12'},AMZN:{th:180000,c:'#9b59b6'},GOOG:{th:170000,c:'#1abc9c'},
+  META:{th:500000,c:'#e67e22'},NFLX:{th:650000,c:'#e84393'}
 };
-
-let count=0, prices={}, hist={}, syms=new Set(), rates=[], lats=[], rcnt={THRESH:0,EMA:0,SPREAD:0};
-Object.keys(SYM).forEach(s => hist[s]=[]);
-
-function dbg(msg) {
-  const d = document.getElementById('debug');
-  d.style.display = 'block';
-  d.textContent = msg;
-}
+let count=0,prices={},bids={},asks={},hist={},syms=new Set(),rates=[],lats=[];
+let rcnt={THRESH:0,EMA:0,SPREAD:0},perSym={};
+let firstTrig={},bannerTimeout=null;
+Object.keys(SYM).forEach(s=>{hist[s]=[];perSym[s]=0});
 
 // WebSocket
 let ws;
-function wsConnect() {
-  try {
-    ws = new WebSocket('ws://localhost:8765');
-  } catch(e) { dbg('WS create error: '+e); return; }
-  ws.onopen = () => {
-    document.getElementById('dot').className = 'dot live';
-    document.getElementById('conn').textContent = 'Live';
-  };
-  ws.onclose = () => {
-    document.getElementById('dot').className = 'dot dead';
-    document.getElementById('conn').textContent = 'Disconnected';
-    setTimeout(wsConnect, 2000);
-  };
-  ws.onerror = (e) => { dbg('WS error'); ws.close(); };
-  ws.onmessage = (e) => {
-    try {
-      onTrigger(JSON.parse(e.data));
-    } catch(err) {
-      dbg('JS error: ' + err.message + ' | data: ' + e.data.substring(0,100));
-    }
-  };
+function wsConnect(){
+  ws=new WebSocket('ws://localhost:8765');
+  ws.onopen=()=>{document.getElementById('dot').className='dot live';document.getElementById('conn').textContent='Live'};
+  ws.onclose=()=>{document.getElementById('dot').className='dot dead';document.getElementById('conn').textContent='Disconnected';setTimeout(wsConnect,2000)};
+  ws.onerror=()=>ws.close();
+  ws.onmessage=(e)=>{try{onTrigger(JSON.parse(e.data))}catch(err){document.getElementById('banner').style.display='block';document.getElementById('banner').textContent='JS Error: '+err.message;document.getElementById('banner').style.background='#440000'}};
 }
 wsConnect();
 
-function onTrigger(m) {
-  if (!m.sym || !m.price) return;
-  count++;
-  syms.add(m.sym);
-  prices[m.sym] = m.price;
-  rates.push(Date.now());
-  if (m.lat_ns > 0) { lats.push(m.lat_ns); if (lats.length>500) lats.shift(); }
-  const r = m.reason || 'THRESH';
-  if (rcnt[r] !== undefined) rcnt[r]++;
-
-  hist[m.sym] && hist[m.sym].push({t:Date.now(), p:m.price});
-  if (hist[m.sym] && hist[m.sym].length > 300) hist[m.sym].shift();
-
-  // Add to feed
-  const feed = document.getElementById('feed');
-  const d = document.createElement('div');
-  const t = new Date(m.ts).toLocaleTimeString();
-  const lat = m.lat_ns > 0 ? (m.lat_ns/1000).toFixed(1)+'us' : '';
-  const rc = {THRESH:'#0f8',EMA:'#f90',SPREAD:'#f44'};
-  d.innerHTML = '<span style="color:#555">'+t+'</span> '+
-    '<span style="color:#4a90d9;font-weight:bold">'+m.sym+'</span> '+
-    '<span style="color:#0f8">$'+(m.price/10000).toFixed(2)+'</span> '+
-    '<span style="color:'+(rc[r]||'#888')+'">'+r+'</span> '+
-    '<span style="color:#888">'+m.side+'</span> '+
-    '<span style="color:#555">'+lat+'</span>';
-  feed.prepend(d);
-  while (feed.children.length > 100) feed.lastChild.remove();
+function showBanner(text,color,duration){
+  const b=document.getElementById('banner');
+  b.textContent=text;b.style.display='block';b.style.background=color;
+  if(bannerTimeout)clearTimeout(bannerTimeout);
+  bannerTimeout=setTimeout(()=>{b.style.display='none'},duration||5000);
 }
 
-// UI refresh every 500ms
-setInterval(() => {
-  const now = Date.now();
-  rates = rates.filter(t => now-t < 5000);
-  const rate = (rates.length/5).toFixed(1);
+function onTrigger(m){
+  if(!m.sym||!m.price)return;
+  count++;syms.add(m.sym);
+  prices[m.sym]=m.price;
+  if(m.side==='bid')bids[m.sym]=m.price;
+  else if(m.side==='ask')asks[m.sym]=m.price;
+  rates.push(Date.now());
+  if(m.lat_ns>0){lats.push(m.lat_ns);if(lats.length>2000)lats.shift()}
+  const r=m.reason||'THRESH';
+  if(rcnt[r]!==undefined)rcnt[r]++;
+  if(perSym[m.sym]!==undefined)perSym[m.sym]++;
 
-  document.getElementById('hdrCount').textContent = count.toLocaleString();
-  document.getElementById('hdrRate').textContent = rate;
-  document.getElementById('sTotal').textContent = count.toLocaleString();
-  document.getElementById('sRate').textContent = rate;
-  document.getElementById('sSyms').textContent = syms.size;
-  document.getElementById('sThresh').textContent = rcnt.THRESH;
-  document.getElementById('sEMA').textContent = rcnt.EMA;
-  document.getElementById('sSpread').textContent = rcnt.SPREAD;
+  hist[m.sym]&&hist[m.sym].push({t:Date.now(),p:m.price});
+  if(hist[m.sym]&&hist[m.sym].length>400)hist[m.sym].shift();
 
-  if (lats.length > 0) {
-    const avg = lats.reduce((a,b)=>a+b,0)/lats.length;
-    const mn = Math.min(...lats);
-    const f = v => v<1000 ? v.toFixed(0)+'ns' : (v/1000).toFixed(1)+'us';
-    document.getElementById('sLatAvg').textContent = f(avg);
-    document.getElementById('sLatMin').textContent = f(mn);
-    document.getElementById('hdrLat').textContent = f(avg);
+  // Announcements
+  if(!firstTrig[m.sym]){
+    firstTrig[m.sym]=true;
+    const msgs=[
+      `${m.sym} just crossed its threshold at $${(m.price/10000).toFixed(2)} — TRIGGER FIRED`,
+      `ALERT: ${m.sym} breached $${(SYM[m.sym]?.th/10000||0).toFixed(0)} target — first trigger detected`,
+      `${m.sym} is now in the trigger zone — FPGA detected crossover in 2.3us`
+    ];
+    showBanner(msgs[Object.keys(firstTrig).length%msgs.length],'#1a3320',8000);
+  }
+  if(r==='EMA'&&rcnt.EMA<=3){
+    showBanner(`EMA CROSSOVER: ${m.sym} price crossed above its moving average — momentum signal detected`,'#332a10',6000);
+  }
+  if(r==='SPREAD'&&rcnt.SPREAD<=3){
+    showBanner(`SPREAD ALERT: ${m.sym} bid-ask spread exceeded $1.00 — possible market stress`,'#331010',6000);
+  }
+
+  // Feed
+  const feed=document.getElementById('feed');
+  const d=document.createElement('div');
+  const t=new Date(m.ts).toLocaleTimeString();
+  const lat=m.lat_ns>0?(m.lat_ns/1000).toFixed(1)+'us':'';
+  const rc={THRESH:'#0f8',EMA:'#f90',SPREAD:'#f44'};
+  d.innerHTML=`<span style="color:#444">${t}</span> <b style="color:#4a90d9">${m.sym}</b> <span style="color:#0f8">$${(m.price/10000).toFixed(2)}</span> <span style="color:${rc[r]||'#888'}">${r}</span> <span style="color:#888">${m.side}</span> <span style="color:#555">${lat}</span>`;
+  feed.prepend(d);
+  while(feed.children.length>80)feed.lastChild.remove();
+}
+
+// UI refresh
+setInterval(()=>{
+  const now=Date.now();
+  rates=rates.filter(t=>now-t<5000);
+  const rate=(rates.length/5).toFixed(1);
+  document.getElementById('hdrCount').textContent=count.toLocaleString();
+  document.getElementById('hdrRate').textContent=rate;
+  document.getElementById('sTotal').textContent=count.toLocaleString();
+  document.getElementById('sRate').textContent=rate;
+  document.getElementById('sSyms').textContent=syms.size;
+  document.getElementById('sThresh').textContent=rcnt.THRESH;
+  document.getElementById('sEMA').textContent=rcnt.EMA;
+  document.getElementById('sSpread').textContent=rcnt.SPREAD;
+  if(lats.length>0){
+    const avg=lats.reduce((a,b)=>a+b,0)/lats.length,mn=Math.min(...lats);
+    const f=v=>v<1000?v.toFixed(0)+'ns':(v/1000).toFixed(1)+'us';
+    document.getElementById('sLatAvg').textContent=f(avg);
+    document.getElementById('sLatMin').textContent=f(mn);
+    document.getElementById('hdrLat').textContent=f(avg);
   }
 
   // Price table
-  const tb = document.getElementById('prices');
-  tb.innerHTML = '';
-  Object.entries(SYM).forEach(([s, cfg]) => {
-    const p = prices[s] || 0;
-    const pct = Math.min(p/(cfg.th*1.5)*100, 100);
-    const thPct = Math.min(cfg.th/(cfg.th*1.5)*100, 100);
-    const above = p >= cfg.th;
-    const tr = document.createElement('tr');
-    tr.innerHTML = '<td class="sym">'+s+'</td>'+
-      '<td class="'+(above?'above':'below')+'" style="font-family:monospace">$'+(p/10000).toFixed(2)+'</td>'+
-      '<td style="color:#f66;font-family:monospace;font-size:11px">$'+(cfg.th/10000).toFixed(0)+'</td>'+
-      '<td><div class="bar"><div class="bar-fill" style="width:'+pct+'%;background:'+(above?'#0f8':cfg.c)+'"></div><div class="bar-mark" style="left:'+thPct+'%"></div></div></td>';
+  const tb=document.getElementById('prices');tb.innerHTML='';
+  Object.entries(SYM).forEach(([s,cfg])=>{
+    const p=prices[s]||0,pct=Math.min(p/(cfg.th*1.3)*100,100),thPct=Math.min(cfg.th/(cfg.th*1.3)*100,100);
+    const above=p>=cfg.th;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="sym">${s}</td><td class="${above?'above':'below'}" style="font-family:monospace">$${(p/10000).toFixed(2)}</td><td style="color:#f66;font-size:10px">$${(cfg.th/10000).toFixed(0)}</td><td><div class="bar"><div class="bar-fill" style="width:${pct}%;background:${above?'#0f8':cfg.c}"></div><div class="bar-mark" style="left:${thPct}%"></div></div></td>`;
     tb.appendChild(tr);
   });
 
+  // Order book
+  const ob=document.getElementById('orderbook');ob.innerHTML='';
+  Object.keys(SYM).forEach(s=>{
+    const b=bids[s]||0,a=asks[s]||0,mx=Math.max(b,a,1);
+    const bw=b/mx*45,aw=a/mx*45;
+    const row=document.createElement('div');row.className='ob-row';
+    row.innerHTML=`<span class="ob-sym">${s}</span><span class="ob-price" style="color:#2ecc71">$${(b/10000).toFixed(0)}</span><div class="ob-bars"><div style="flex:1;display:flex;justify-content:flex-end"><div class="ob-bid" style="width:${bw}%"></div></div><div class="ob-mid"></div><div style="flex:1"><div class="ob-ask" style="width:${aw}%"></div></div></div><span class="ob-price" style="color:#e74c3c">$${(a/10000).toFixed(0)}</span>`;
+    ob.appendChild(row);
+  });
+
+  // Heatmap
+  const hm=document.getElementById('heatmap');hm.innerHTML='';
+  const maxCnt=Math.max(1,...Object.values(perSym));
+  Object.entries(SYM).forEach(([s,cfg])=>{
+    const cnt=perSym[s]||0;
+    const intensity=Math.min(cnt/maxCnt,1);
+    const bg=`rgba(${cfg.c.match(/\w\w/g)?.map(x=>parseInt(x,16)).join(',')||'74,144,217'},${0.1+intensity*0.7})`;
+    const cell=document.createElement('div');cell.className='hm-cell';cell.style.background=bg;
+    cell.innerHTML=`<span class="hm-sym">${s}</span><span class="hm-cnt">${cnt}</span>`;
+    hm.appendChild(cell);
+  });
+
+  // Donut chart
+  drawDonut();
   drawChart();
-}, 500);
+  drawLatHist();
+},500);
 
-// Price chart
-function drawChart() {
-  const c = document.getElementById('chart');
-  const ctx = c.getContext('2d');
-  const r = c.parentElement.getBoundingClientRect();
-  c.width = r.width; c.height = r.height;
-  ctx.fillStyle = '#0d0d20'; ctx.fillRect(0,0,c.width,c.height);
+function drawDonut(){
+  const c=document.getElementById('donut');
+  const ctx=c.getContext('2d');
+  c.width=100;c.height=100;
+  const total=rcnt.THRESH+rcnt.EMA+rcnt.SPREAD;
+  if(total===0)return;
+  const data=[{v:rcnt.THRESH,c:'#00ff88',l:'THRESH'},{v:rcnt.EMA,c:'#f39c12',l:'EMA'},{v:rcnt.SPREAD,c:'#e74c3c',l:'SPREAD'}];
+  let angle=-Math.PI/2;
+  data.forEach(d=>{
+    const slice=d.v/total*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(50,50);ctx.arc(50,50,45,angle,angle+slice);ctx.fillStyle=d.c;ctx.fill();
+    angle+=slice;
+  });
+  ctx.beginPath();ctx.arc(50,50,25,0,Math.PI*2);ctx.fillStyle='#111128';ctx.fill();
+  ctx.fillStyle='#aaa';ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText(total,50,55);
 
-  const now = Date.now(), win = 60000;
-  const pad = {l:50,r:10,t:15,b:20};
-  const w = c.width-pad.l-pad.r, h = c.height-pad.t-pad.b;
+  const leg=document.getElementById('donutLeg');leg.innerHTML='';
+  data.forEach(d=>{
+    if(d.v===0)return;
+    const div=document.createElement('div');
+    div.innerHTML=`<span class="dot-lg" style="background:${d.c}"></span>${d.l}: ${d.v} (${(d.v/total*100).toFixed(0)}%)`;
+    leg.appendChild(div);
+  });
+}
 
-  let mn=Infinity, mx=-Infinity;
-  Object.values(hist).forEach(a => a.forEach(d => {
-    if (now-d.t<win) { const v=d.p/10000; if(v<mn)mn=v; if(v>mx)mx=v; }
-  }));
-  if (mn===Infinity) { mn=0; mx=100; }
-  const rng = mx-mn||1; mn-=rng*.05; mx+=rng*.05;
+function drawChart(){
+  const c=document.getElementById('chart'),ctx=c.getContext('2d');
+  const r=c.parentElement.getBoundingClientRect();c.width=r.width;c.height=r.height;
+  ctx.fillStyle='#0d0d20';ctx.fillRect(0,0,c.width,c.height);
+  const now=Date.now(),win=60000,pad={l:50,r:10,t:15,b:20},w=c.width-pad.l-pad.r,h=c.height-pad.t-pad.b;
+  let mn=Infinity,mx=-Infinity;
+  Object.values(hist).forEach(a=>a.forEach(d=>{if(now-d.t<win){const v=d.p/10000;if(v<mn)mn=v;if(v>mx)mx=v}}));
+  if(mn===Infinity){mn=0;mx=100}
+  const rng=mx-mn||1;mn-=rng*.05;mx+=rng*.05;
+  ctx.strokeStyle='#1a1a2e';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pad.t+h*i/4;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+w,y);ctx.stroke();ctx.fillStyle='#444';ctx.font='10px monospace';ctx.textAlign='right';ctx.fillText('$'+(mx-(mx-mn)*i/4).toFixed(0),pad.l-4,y+4)}
+  // Threshold lines
+  Object.entries(SYM).forEach(([s,cfg])=>{
+    if(!prices[s])return;
+    const ty=pad.t+h-((cfg.th/10000-mn)/(mx-mn))*h;
+    if(ty>pad.t&&ty<pad.t+h){ctx.strokeStyle=cfg.c;ctx.globalAlpha=.15;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(pad.l,ty);ctx.lineTo(pad.l+w,ty);ctx.stroke();ctx.setLineDash([])}
+    ctx.globalAlpha=1;
+  });
+  Object.entries(SYM).forEach(([s,cfg])=>{
+    const a=hist[s];if(!a||a.length<2)return;
+    ctx.strokeStyle=cfg.c;ctx.lineWidth=2;ctx.globalAlpha=.85;ctx.beginPath();let started=false;
+    a.forEach(d=>{if(now-d.t>win)return;const x=pad.l+((d.t-(now-win))/win)*w,y=pad.t+h-((d.p/10000-mn)/(mx-mn))*h;if(!started){ctx.moveTo(x,y);started=true}else ctx.lineTo(x,y)});
+    ctx.stroke();ctx.globalAlpha=1;
+  });
+  let lx=pad.l+5;ctx.font='10px sans-serif';
+  Object.entries(SYM).forEach(([s,cfg])=>{if(!prices[s])return;ctx.fillStyle=cfg.c;ctx.fillRect(lx,pad.t+2,8,8);ctx.fillStyle='#aaa';ctx.textAlign='left';ctx.fillText(s,lx+11,pad.t+10);lx+=55});
+}
 
-  // Grid
-  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1;
-  for (let i=0;i<=4;i++) {
-    const y=pad.t+h*i/4;
-    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+w,y); ctx.stroke();
-    ctx.fillStyle='#444'; ctx.font='10px monospace'; ctx.textAlign='right';
-    ctx.fillText('$'+(mx-(mx-mn)*i/4).toFixed(0), pad.l-4, y+4);
+function drawLatHist(){
+  const c=document.getElementById('latChart'),ctx=c.getContext('2d');
+  const r=c.parentElement.getBoundingClientRect();c.width=r.width;c.height=r.height;
+  ctx.fillStyle='#0d0d20';ctx.fillRect(0,0,c.width,c.height);
+  if(lats.length<10)return;
+  const pad={l:40,r:15,t:10,b:30},w=c.width-pad.l-pad.r,h=c.height-pad.t-pad.b;
+  const mn=Math.min(...lats),mx=Math.max(...lats);
+  const nbins=30,binW=(mx-mn+1)/nbins;
+  const bins=new Array(nbins).fill(0);
+  lats.forEach(v=>{const idx=Math.min(Math.floor((v-mn)/binW),nbins-1);bins[idx]++});
+  const maxBin=Math.max(...bins);
+  const barW=w/nbins-1;
+  // Draw bars
+  bins.forEach((cnt,i)=>{
+    const barH=maxBin>0?(cnt/maxBin)*h:0;
+    const x=pad.l+i*(w/nbins);
+    const grad=ctx.createLinearGradient(0,pad.t+h-barH,0,pad.t+h);
+    grad.addColorStop(0,'#00ff88');grad.addColorStop(1,'#0a4a2a');
+    ctx.fillStyle=grad;
+    ctx.fillRect(x,pad.t+h-barH,Math.max(barW,2),barH);
+  });
+  // Labels
+  const f=v=>v<1000?v.toFixed(0)+'ns':(v/1000).toFixed(1)+'us';
+  ctx.fillStyle='#888';ctx.font='10px monospace';
+  ctx.textAlign='left';ctx.fillText(f(mn),pad.l,pad.t+h+14);
+  ctx.textAlign='right';ctx.fillText(f(mx),pad.l+w,pad.t+h+14);
+  ctx.textAlign='center';ctx.fillText('Latency (RX to Trigger)',c.width/2,pad.t+h+26);
+  // Peak annotation
+  const peakIdx=bins.indexOf(maxBin);
+  const peakVal=mn+peakIdx*binW+binW/2;
+  const peakX=pad.l+peakIdx*(w/nbins)+barW/2;
+  ctx.fillStyle='#00ff88';ctx.font='bold 11px monospace';ctx.textAlign='center';
+  ctx.fillText(f(peakVal),peakX,pad.t-1);
+  // Software comparison line
+  const swLat=50000; // 50us = typical software
+  if(swLat>=mn&&swLat<=mx){
+    const sx=pad.l+((swLat-mn)/(mx-mn))*w;
+    ctx.strokeStyle='#f44';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+    ctx.beginPath();ctx.moveTo(sx,pad.t);ctx.lineTo(sx,pad.t+h);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#f44';ctx.font='9px sans-serif';ctx.textAlign='left';
+    ctx.fillText('Software (~50us)',sx+4,pad.t+12);
   }
-
-  // Lines
-  Object.entries(SYM).forEach(([s,cfg]) => {
-    const a = hist[s]; if (!a||a.length<2) return;
-    ctx.strokeStyle=cfg.c; ctx.lineWidth=2; ctx.globalAlpha=.85;
-    ctx.beginPath(); let started=false;
-    a.forEach(d => {
-      if (now-d.t>win) return;
-      const x=pad.l+((d.t-(now-win))/win)*w;
-      const y=pad.t+h-((d.p/10000-mn)/(mx-mn))*h;
-      if (!started){ctx.moveTo(x,y);started=true;} else ctx.lineTo(x,y);
-    });
-    ctx.stroke(); ctx.globalAlpha=1;
-  });
-
-  // Legend
-  let lx=pad.l+5;
-  Object.entries(SYM).forEach(([s,cfg]) => {
-    if (!prices[s]) return;
-    ctx.fillStyle=cfg.c; ctx.fillRect(lx,pad.t+2,8,8);
-    ctx.fillStyle='#aaa'; ctx.font='10px sans-serif'; ctx.textAlign='left';
-    ctx.fillText(s,lx+11,pad.t+10); lx+=55;
-  });
 }
 </script>
 </body>

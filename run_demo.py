@@ -88,19 +88,28 @@ print("  Press Ctrl+C to stop\n", flush=True)
 import random
 from scapy.all import Ether, Raw, sendp
 
+# Start prices 15-20% BELOW thresholds — triggers fire gradually as prices climb
+#                  sym     start    threshold  (start is ~85% of threshold)
 SYMBOLS_DATA = [
-    (b'AAPL', 125000), (b'MSFT', 205000), (b'NVDA', 905000), (b'TSLA', 505000),
-    (b'AMZN', 185000), (b'GOOG', 175000), (b'META', 505000), (b'NFLX', 655000),
+    (b'AAPL', 100000, 120000), (b'MSFT', 170000, 200000),
+    (b'NVDA', 770000, 900000), (b'TSLA', 420000, 500000),
+    (b'AMZN', 150000, 180000), (b'GOOG', 145000, 170000),
+    (b'META', 420000, 500000), (b'NFLX', 550000, 650000),
 ]
 prices = {s[0]: s[1] for s in SYMBOLS_DATA}
-seq = 0  # start at 0; FPGA was just reprogrammed so last_seq is reset
+thresholds = {s[0]: s[2] for s in SYMBOLS_DATA}
+seq = 0
 total = 0
 try:
     while True:
-        sym, base = random.choice(SYMBOLS_DATA)
+        sym, _, thresh = random.choice(SYMBOLS_DATA)
         seq += 1
-        # Random walk around threshold — prices hover near trigger zone
-        prices[sym] = max(10000, prices[sym] + random.randint(-3000, 3500))
+        # Mean-reverting walk: drift toward threshold, with noise
+        # Pulls price toward 95% of threshold (so it oscillates around the trigger zone)
+        target = int(thresh * 0.95)
+        drift = (target - prices[sym]) // 80  # gentle pull toward target
+        noise = random.randint(-2500, 2500)
+        prices[sym] = max(10000, prices[sym] + drift + noise)
         price = prices[sym]
         qty = random.randint(50, 500)
         side = random.randint(0, 1)
