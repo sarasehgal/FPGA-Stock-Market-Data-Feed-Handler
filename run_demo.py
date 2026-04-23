@@ -113,7 +113,8 @@ try:
         sendp(Ether(dst='ff:ff:ff:ff:ff:ff', src='d4:a2:cd:1c:a9:0b', type=0x88B5)/Raw(load=payload),
               iface=IFACE, verbose=False)
         total += 1
-        if total % 1000 == 0:
+        time.sleep(0.01)  # ~100 frames/sec — keeps seq alive for ~10 min before wrap
+        if total % 500 == 0:
             status = ' '.join(f'{s[0].decode()}=${prices[s[0]]/10000:.0f}' for s in SYMBOLS_DATA)
             print(f"  [{total}] {status}", flush=True)
 except KeyboardInterrupt:
