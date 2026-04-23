@@ -40,8 +40,16 @@ step("Starting demo_server.py...")
 server = subprocess.Popen(
     [PYTHON, "-u", "demo_server.py"],
     cwd=PROJ, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-time.sleep(3)
-print("  Server started")
+time.sleep(2)
+print("  WebSocket server started")
+
+# Start HTTP server separately (demo_server's HTTP thread sometimes fails silently)
+step("Starting HTTP server on port 8080...")
+http_proc = subprocess.Popen(
+    [PYTHON, "-m", "http.server", "8080", "--directory", PROJ],
+    cwd=PROJ, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+time.sleep(1)
+print("  HTTP server started")
 
 # ── 4. Verify UART works ────────────────────────────────────
 step("Quick UART verification (5s)...")
@@ -121,4 +129,5 @@ except KeyboardInterrupt:
     print(f"\n  Stopped after {total} frames")
 finally:
     server.terminate()
-    print("  Server stopped. Done.")
+    http_proc.terminate()
+    print("  Servers stopped. Done.")

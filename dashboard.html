@@ -5,469 +5,261 @@
 <title>FPGA Stock Feed - Live Dashboard</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#0a0a1a; color:#e0e0e0; font-family:'Segoe UI',system-ui,sans-serif; overflow:hidden; height:100vh; }
+body { background:#0a0a1a; color:#e0e0e0; font-family:'Segoe UI',sans-serif; height:100vh; display:flex; flex-direction:column; }
 
-.grid { display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:auto 1fr 1fr; gap:8px; padding:8px; height:100vh; }
-
-/* Header */
-.header { grid-column:1/4; display:flex; justify-content:space-between; align-items:center; background:#111128; border-radius:8px; padding:8px 20px; border:1px solid #333; }
+.header { display:flex; justify-content:space-between; align-items:center; background:#111128; padding:10px 20px; border-bottom:1px solid #333; flex-shrink:0; }
 .header h1 { font-size:18px; color:#00ff88; }
-.header .status { font-size:13px; }
-.header .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; animation:pulse 1.5s infinite; }
-.dot.live { background:#00ff88; box-shadow:0 0 8px #00ff88; }
-.dot.dead { background:#ff4444; animation:none; }
+.header .stats { font-size:13px; font-family:monospace; }
+.dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+.dot.live { background:#00ff88; animation:pulse 1.5s infinite; }
+.dot.dead { background:#ff4444; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-/* Panels */
-.panel { background:#111128; border-radius:8px; border:1px solid #222; padding:12px; overflow:hidden; display:flex; flex-direction:column; }
-.panel h2 { font-size:12px; color:#888; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; flex-shrink:0; }
+.main { display:flex; flex:1; min-height:0; }
+.left { flex:1; display:flex; flex-direction:column; border-right:1px solid #222; }
+.right { width:420px; display:flex; flex-direction:column; }
 
-/* Wide panels */
-.wide { grid-column: span 2; }
+.section { padding:10px 14px; border-bottom:1px solid #1a1a2e; }
+.section h2 { font-size:11px; color:#666; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
 
 /* Price table */
-.price-table { width:100%; border-collapse:collapse; font-size:12px; }
-.price-table th { text-align:left; color:#555; font-weight:normal; padding:3px 6px; border-bottom:1px solid #222; font-size:11px; }
-.price-table td { padding:4px 6px; border-bottom:1px solid #1a1a2e; }
-.price-table .sym { color:#4a90d9; font-weight:600; }
-.price-table .price { font-family:'Courier New',monospace; }
-.price-table .above { color:#00ff88; text-shadow:0 0 6px rgba(0,255,136,.3); }
-.price-table .below { color:#888; }
-.price-table .bar-cell { width:35%; }
-.bar-bg { background:#1a1a2e; border-radius:3px; height:12px; position:relative; overflow:hidden; }
-.bar-fill { height:100%; border-radius:3px; transition:width .4s ease; }
-.thresh-mark { position:absolute; top:0; bottom:0; width:2px; background:#ff4444; }
-.price-table .change { font-size:11px; }
-.price-table .up { color:#00ff88; }
-.price-table .dn { color:#ff4444; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { text-align:left; color:#555; font-weight:normal; padding:3px 6px; }
+td { padding:4px 6px; border-bottom:1px solid #111; }
+.sym { color:#4a90d9; font-weight:600; }
+.above { color:#00ff88; }
+.below { color:#888; }
+.bar { background:#1a1a2e; height:10px; border-radius:3px; position:relative; }
+.bar-fill { height:100%; border-radius:3px; transition:width .3s; }
+.bar-mark { position:absolute; top:0; bottom:0; width:2px; background:#f44; }
 
-/* Trigger feed */
-.feed { flex:1; overflow-y:auto; font-family:'Courier New',monospace; font-size:11px; }
-.feed::-webkit-scrollbar { width:4px; }
-.feed::-webkit-scrollbar-thumb { background:#333; border-radius:2px; }
-.feed-item { padding:2px 0; border-bottom:1px solid #0d0d20; animation:fadeIn .3s; display:flex; gap:6px; }
-.feed-item .ts { color:#444; min-width:65px; }
-.feed-item .sym { color:#4a90d9; font-weight:bold; min-width:40px; }
-.feed-item .fprice { color:#00ff88; min-width:65px; }
-.feed-item .side { min-width:28px; }
-.feed-item .side.bid { color:#2ecc71; }
-.feed-item .side.ask { color:#e74c3c; }
-.feed-item .lat { color:#555; }
-@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
+/* Feed */
+.feed { flex:1; overflow-y:auto; font-family:monospace; font-size:11px; padding:8px 14px; min-height:0; }
+.feed div { padding:2px 0; border-bottom:1px solid #0d0d20; animation:fadeIn .2s; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
-/* Stats */
-.stat-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-.stat-box { background:#1a1a2e; border-radius:6px; padding:8px; text-align:center; }
-.stat-box .val { font-size:20px; font-weight:700; color:#00ff88; font-family:'Courier New',monospace; }
-.stat-box .label { font-size:10px; color:#555; margin-top:2px; }
+/* Chart */
+.chart-box { flex:1; min-height:0; padding:8px; }
+canvas { width:100%; height:100%; display:block; }
 
-/* Chart area */
-.chart-wrap { flex:1; position:relative; min-height:0; }
-canvas { width:100%!important; height:100%!important; }
+/* Stat boxes */
+.stat-row { display:flex; gap:6px; padding:8px 14px; flex-wrap:wrap; }
+.sbox { background:#1a1a2e; border-radius:5px; padding:6px 10px; text-align:center; flex:1; min-width:80px; }
+.sbox .v { font-size:18px; font-weight:700; color:#00ff88; font-family:monospace; }
+.sbox .l { font-size:9px; color:#555; }
+
+#debug { color:#ff0; font-size:10px; padding:2px 14px; background:#1a0a0a; display:none; }
 </style>
 </head>
 <body>
-<div class="grid">
-  <!-- Header -->
-  <div class="header">
-    <h1>FPGA Stock Feed Pipeline</h1>
-    <div class="status">
-      <span class="dot dead" id="dot"></span>
-      <span id="connStatus">Connecting...</span>
-      &nbsp;&nbsp;|&nbsp;&nbsp;
-      Triggers: <strong id="trigCount">0</strong>
-      &nbsp;&nbsp;|&nbsp;&nbsp;
-      Rate: <strong id="trigRate">0</strong>/s
-      &nbsp;&nbsp;|&nbsp;&nbsp;
-      Latency: <strong id="trigLat">--</strong>
+
+<div class="header">
+  <h1>FPGA Stock Feed Pipeline</h1>
+  <div class="stats">
+    <span class="dot dead" id="dot"></span>
+    <span id="conn">Connecting...</span> |
+    Triggers: <b id="hdrCount">0</b> |
+    Rate: <b id="hdrRate">0</b>/s |
+    Latency: <b id="hdrLat">--</b>
+  </div>
+</div>
+
+<div id="debug"></div>
+
+<div class="stat-row">
+  <div class="sbox"><div class="v" id="sTotal">0</div><div class="l">Total</div></div>
+  <div class="sbox"><div class="v" id="sRate">0</div><div class="l">Rate/s</div></div>
+  <div class="sbox"><div class="v" id="sLatAvg">--</div><div class="l">Avg Lat</div></div>
+  <div class="sbox"><div class="v" id="sLatMin">--</div><div class="l">Min Lat</div></div>
+  <div class="sbox"><div class="v" id="sSyms">0</div><div class="l">Symbols</div></div>
+  <div class="sbox"><div class="v" id="sThresh" style="color:#00ff88">0</div><div class="l">Threshold</div></div>
+  <div class="sbox"><div class="v" id="sEMA" style="color:#f39c12">0</div><div class="l">EMA Cross</div></div>
+  <div class="sbox"><div class="v" id="sSpread" style="color:#e74c3c">0</div><div class="l">Spread</div></div>
+</div>
+
+<div class="main">
+  <div class="left">
+    <div class="section">
+      <h2>Live Prices vs Thresholds</h2>
+      <table>
+        <thead><tr><th>Symbol</th><th>Price</th><th>Threshold</th><th style="width:30%">Level</th></tr></thead>
+        <tbody id="prices"></tbody>
+      </table>
+    </div>
+    <div class="chart-box">
+      <canvas id="chart"></canvas>
     </div>
   </div>
-
-  <!-- Price Table -->
-  <div class="panel">
-    <h2>Live Prices vs Thresholds</h2>
-    <table class="price-table">
-      <thead><tr><th>Symbol</th><th>Price</th><th>Thresh</th><th></th><th class="bar-cell">Level</th></tr></thead>
-      <tbody id="priceBody"></tbody>
-    </table>
-  </div>
-
-  <!-- Trigger Feed -->
-  <div class="panel">
-    <h2>Trigger Feed</h2>
+  <div class="right">
+    <div class="section"><h2>Trigger Feed (live)</h2></div>
     <div class="feed" id="feed"></div>
-  </div>
-
-  <!-- Stats -->
-  <div class="panel">
-    <h2>System Stats</h2>
-    <div class="stat-grid">
-      <div class="stat-box"><div class="val" id="statTotal">0</div><div class="label">Total Triggers</div></div>
-      <div class="stat-box"><div class="val" id="statRate">0</div><div class="label">Triggers/sec</div></div>
-      <div class="stat-box"><div class="val" id="statLatAvg">--</div><div class="label">Avg Latency</div></div>
-      <div class="stat-box"><div class="val" id="statLatMin">--</div><div class="label">Min Latency</div></div>
-      <div class="stat-box"><div class="val" id="statLatMax">--</div><div class="label">Max Latency</div></div>
-      <div class="stat-box"><div class="val" id="statSymbols">0</div><div class="label">Symbols Seen</div></div>
-      <div class="stat-box"><div class="val" id="statThresh" style="color:#00ff88">0</div><div class="label">Threshold</div></div>
-      <div class="stat-box"><div class="val" id="statEMA" style="color:#f39c12">0</div><div class="label">EMA Cross</div></div>
-      <div class="stat-box"><div class="val" id="statSpread" style="color:#e74c3c">0</div><div class="label">Spread Alert</div></div>
-    </div>
-    <!-- Latency histogram -->
-    <h2 style="margin-top:12px">Latency Distribution</h2>
-    <div class="chart-wrap" style="max-height:120px"><canvas id="latChart"></canvas></div>
-  </div>
-
-  <!-- Price History Chart -->
-  <div class="panel wide">
-    <h2>Price History (60s window)</h2>
-    <div class="chart-wrap"><canvas id="chart"></canvas></div>
-  </div>
-
-  <!-- Trigger Rate Chart -->
-  <div class="panel">
-    <h2>Trigger Rate (per second)</h2>
-    <div class="chart-wrap"><canvas id="rateChart"></canvas></div>
   </div>
 </div>
 
 <script>
-const SYMBOLS = {
-  AAPL:{thresh:120000,color:'#4a90d9'},
-  MSFT:{thresh:200000,color:'#e74c3c'},
-  NVDA:{thresh:900000,color:'#2ecc71'},
-  TSLA:{thresh:500000,color:'#f39c12'},
-  AMZN:{thresh:180000,color:'#9b59b6'},
-  GOOG:{thresh:170000,color:'#1abc9c'},
-  META:{thresh:500000,color:'#e67e22'},
-  NFLX:{thresh:650000,color:'#e84393'},
+const SYM = {
+  AAPL:{th:120000,c:'#4a90d9'}, MSFT:{th:200000,c:'#e74c3c'}, NVDA:{th:900000,c:'#2ecc71'},
+  TSLA:{th:500000,c:'#f39c12'}, AMZN:{th:180000,c:'#9b59b6'}, GOOG:{th:170000,c:'#1abc9c'},
+  META:{th:500000,c:'#e67e22'}, NFLX:{th:650000,c:'#e84393'}
 };
 
-let trigCount = 0, startTime = Date.now();
-let lastPrices = {}, prevPrices = {};
-let priceHistory = {};
-let symbolsSeen = new Set();
-let recentRate = [];
-let latencies = [];
-let rateHistory = [];      // [{t, rate}]
-let perSymbolCount = {};
+let count=0, prices={}, hist={}, syms=new Set(), rates=[], lats=[], rcnt={THRESH:0,EMA:0,SPREAD:0};
+Object.keys(SYM).forEach(s => hist[s]=[]);
 
-Object.keys(SYMBOLS).forEach(s => { priceHistory[s] = []; perSymbolCount[s] = 0; });
+function dbg(msg) {
+  const d = document.getElementById('debug');
+  d.style.display = 'block';
+  d.textContent = msg;
+}
 
 // WebSocket
 let ws;
-function connect() {
-  ws = new WebSocket('ws://localhost:8765');
+function wsConnect() {
+  try {
+    ws = new WebSocket('ws://localhost:8765');
+  } catch(e) { dbg('WS create error: '+e); return; }
   ws.onopen = () => {
     document.getElementById('dot').className = 'dot live';
-    document.getElementById('connStatus').textContent = 'Live';
+    document.getElementById('conn').textContent = 'Live';
   };
   ws.onclose = () => {
     document.getElementById('dot').className = 'dot dead';
-    document.getElementById('connStatus').textContent = 'Disconnected';
-    setTimeout(connect, 2000);
+    document.getElementById('conn').textContent = 'Disconnected';
+    setTimeout(wsConnect, 2000);
   };
-  ws.onerror = () => ws.close();
-  ws.onmessage = (e) => { try { handleTrigger(JSON.parse(e.data)); } catch(err) {} };
+  ws.onerror = (e) => { dbg('WS error'); ws.close(); };
+  ws.onmessage = (e) => {
+    try {
+      onTrigger(JSON.parse(e.data));
+    } catch(err) {
+      dbg('JS error: ' + err.message + ' | data: ' + e.data.substring(0,100));
+    }
+  };
 }
-connect();
+wsConnect();
 
-let reasonCounts = {THRESH:0, EMA:0, SPREAD:0};
+function onTrigger(m) {
+  if (!m.sym || !m.price) return;
+  count++;
+  syms.add(m.sym);
+  prices[m.sym] = m.price;
+  rates.push(Date.now());
+  if (m.lat_ns > 0) { lats.push(m.lat_ns); if (lats.length>500) lats.shift(); }
+  const r = m.reason || 'THRESH';
+  if (rcnt[r] !== undefined) rcnt[r]++;
 
-function handleTrigger(msg) {
-  const {sym, price, side, ts, lat_ns, reason} = msg;
-  if (!sym || !price) return;
+  hist[m.sym] && hist[m.sym].push({t:Date.now(), p:m.price});
+  if (hist[m.sym] && hist[m.sym].length > 300) hist[m.sym].shift();
 
-  trigCount++;
-  symbolsSeen.add(sym);
-  prevPrices[sym] = lastPrices[sym] || price;
-  lastPrices[sym] = price;
-  recentRate.push(Date.now());
-  if (lat_ns > 0) { latencies.push(lat_ns); if (latencies.length > 1000) latencies.shift(); }
-  if (perSymbolCount[sym] !== undefined) perSymbolCount[sym]++;
-  if (reason && reasonCounts[reason] !== undefined) reasonCounts[reason]++;
-
-  if (priceHistory[sym]) {
-    priceHistory[sym].push({t: Date.now(), price});
-    if (priceHistory[sym].length > 500) priceHistory[sym].shift();
-  }
-
-  // Feed
+  // Add to feed
   const feed = document.getElementById('feed');
-  const div = document.createElement('div');
-  div.className = 'feed-item';
-  const timeStr = new Date(ts).toLocaleTimeString();
-  const reasonColors = {THRESH:'#00ff88', EMA:'#f39c12', SPREAD:'#e74c3c'};
-  const rc = reason || 'THRESH';
-  const latStr = lat_ns > 0 ? `${(lat_ns/1000).toFixed(1)}us` : '';
-  div.innerHTML = `<span class="ts">${timeStr}</span><span class="sym">${sym}</span><span class="fprice">$${(price/10000).toFixed(2)}</span><span style="color:${reasonColors[rc]||'#888'};min-width:50px;font-size:10px">${rc}</span><span class="side ${side==='ask'?'ask':'bid'}">${side}</span><span class="lat">${latStr}</span>`;
-  feed.prepend(div);
-  while (feed.children.length > 80) feed.lastChild.remove();
+  const d = document.createElement('div');
+  const t = new Date(m.ts).toLocaleTimeString();
+  const lat = m.lat_ns > 0 ? (m.lat_ns/1000).toFixed(1)+'us' : '';
+  const rc = {THRESH:'#0f8',EMA:'#f90',SPREAD:'#f44'};
+  d.innerHTML = '<span style="color:#555">'+t+'</span> '+
+    '<span style="color:#4a90d9;font-weight:bold">'+m.sym+'</span> '+
+    '<span style="color:#0f8">$'+(m.price/10000).toFixed(2)+'</span> '+
+    '<span style="color:'+(rc[r]||'#888')+'">'+r+'</span> '+
+    '<span style="color:#888">'+m.side+'</span> '+
+    '<span style="color:#555">'+lat+'</span>';
+  feed.prepend(d);
+  while (feed.children.length > 100) feed.lastChild.remove();
 }
 
-// ── UI update loop ──
+// UI refresh every 500ms
 setInterval(() => {
   const now = Date.now();
-  recentRate = recentRate.filter(t => now - t < 5000);
-  const rate = (recentRate.length / 5).toFixed(1);
+  rates = rates.filter(t => now-t < 5000);
+  const rate = (rates.length/5).toFixed(1);
 
-  // Record rate history
-  rateHistory.push({t: now, rate: parseFloat(rate)});
-  if (rateHistory.length > 120) rateHistory.shift();
+  document.getElementById('hdrCount').textContent = count.toLocaleString();
+  document.getElementById('hdrRate').textContent = rate;
+  document.getElementById('sTotal').textContent = count.toLocaleString();
+  document.getElementById('sRate').textContent = rate;
+  document.getElementById('sSyms').textContent = syms.size;
+  document.getElementById('sThresh').textContent = rcnt.THRESH;
+  document.getElementById('sEMA').textContent = rcnt.EMA;
+  document.getElementById('sSpread').textContent = rcnt.SPREAD;
 
-  document.getElementById('trigCount').textContent = trigCount.toLocaleString();
-  document.getElementById('trigRate').textContent = rate;
-  document.getElementById('statTotal').textContent = trigCount.toLocaleString();
-  document.getElementById('statRate').textContent = rate;
-  document.getElementById('statSymbols').textContent = symbolsSeen.size;
-  document.getElementById('statThresh').textContent = reasonCounts.THRESH;
-  document.getElementById('statEMA').textContent = reasonCounts.EMA;
-  document.getElementById('statSpread').textContent = reasonCounts.SPREAD;
-
-  if (latencies.length > 0) {
-    const avg = latencies.reduce((a,b)=>a+b,0)/latencies.length;
-    const mn = Math.min(...latencies);
-    const mx = Math.max(...latencies);
-    const fmt = v => v < 1000 ? `${v.toFixed(0)}ns` : `${(v/1000).toFixed(1)}us`;
-    document.getElementById('statLatAvg').textContent = fmt(avg);
-    document.getElementById('statLatMin').textContent = fmt(mn);
-    document.getElementById('statLatMax').textContent = fmt(mx);
-    document.getElementById('trigLat').textContent = fmt(avg);
+  if (lats.length > 0) {
+    const avg = lats.reduce((a,b)=>a+b,0)/lats.length;
+    const mn = Math.min(...lats);
+    const f = v => v<1000 ? v.toFixed(0)+'ns' : (v/1000).toFixed(1)+'us';
+    document.getElementById('sLatAvg').textContent = f(avg);
+    document.getElementById('sLatMin').textContent = f(mn);
+    document.getElementById('hdrLat').textContent = f(avg);
   }
 
   // Price table
-  const body = document.getElementById('priceBody');
-  body.innerHTML = '';
-  Object.entries(SYMBOLS).forEach(([sym, cfg]) => {
-    const p = lastPrices[sym] || 0;
-    const pp = prevPrices[sym] || p;
-    const pct = Math.min(p / (cfg.thresh * 1.5) * 100, 100);
-    const threshPct = Math.min(cfg.thresh / (cfg.thresh * 1.5) * 100, 100);
-    const above = p >= cfg.thresh;
-    const diff = p - pp;
-    const diffStr = diff >= 0 ? `+${(diff/10000).toFixed(2)}` : `${(diff/10000).toFixed(2)}`;
-    const diffClass = diff >= 0 ? 'up' : 'dn';
-    const cnt = perSymbolCount[sym] || 0;
+  const tb = document.getElementById('prices');
+  tb.innerHTML = '';
+  Object.entries(SYM).forEach(([s, cfg]) => {
+    const p = prices[s] || 0;
+    const pct = Math.min(p/(cfg.th*1.5)*100, 100);
+    const thPct = Math.min(cfg.th/(cfg.th*1.5)*100, 100);
+    const above = p >= cfg.th;
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="sym">${sym} <span style="color:#444;font-size:10px">(${cnt})</span></td>
-      <td class="price ${above?'above':'below'}">$${(p/10000).toFixed(2)}</td>
-      <td class="price" style="color:#ff6b6b;font-size:11px">$${(cfg.thresh/10000).toFixed(0)}</td>
-      <td class="change ${diffClass}">${diffStr}</td>
-      <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${above?'#00ff88':cfg.color}"></div><div class="thresh-mark" style="left:${threshPct}%"></div></div></td>`;
-    body.appendChild(tr);
+    tr.innerHTML = '<td class="sym">'+s+'</td>'+
+      '<td class="'+(above?'above':'below')+'" style="font-family:monospace">$'+(p/10000).toFixed(2)+'</td>'+
+      '<td style="color:#f66;font-family:monospace;font-size:11px">$'+(cfg.th/10000).toFixed(0)+'</td>'+
+      '<td><div class="bar"><div class="bar-fill" style="width:'+pct+'%;background:'+(above?'#0f8':cfg.c)+'"></div><div class="bar-mark" style="left:'+thPct+'%"></div></div></td>';
+    tb.appendChild(tr);
   });
 
-  drawPriceChart();
-  drawRateChart();
-  drawLatencyHist();
+  drawChart();
 }, 500);
 
-// ── Price history chart ──
-function drawPriceChart() {
-  const canvas = document.getElementById('chart');
-  const ctx = canvas.getContext('2d');
-  const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width * devicePixelRatio;
-  canvas.height = rect.height * devicePixelRatio;
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-  const W = rect.width, H = rect.height;
+// Price chart
+function drawChart() {
+  const c = document.getElementById('chart');
+  const ctx = c.getContext('2d');
+  const r = c.parentElement.getBoundingClientRect();
+  c.width = r.width; c.height = r.height;
+  ctx.fillStyle = '#0d0d20'; ctx.fillRect(0,0,c.width,c.height);
 
-  ctx.fillStyle = '#0d0d20';
-  ctx.fillRect(0, 0, W, H);
+  const now = Date.now(), win = 60000;
+  const pad = {l:50,r:10,t:15,b:20};
+  const w = c.width-pad.l-pad.r, h = c.height-pad.t-pad.b;
 
-  const now = Date.now(), windowMs = 60000;
-  const pad = {l:55, r:15, t:20, b:25};
-  const w = W - pad.l - pad.r, h = H - pad.t - pad.b;
-
-  let minP = Infinity, maxP = -Infinity;
-  Object.values(priceHistory).forEach(arr => {
-    arr.forEach(d => { if (now - d.t < windowMs) { const v=d.price/10000; if(v<minP)minP=v; if(v>maxP)maxP=v; }});
-  });
-  if (minP === Infinity) { minP = 0; maxP = 100; }
-  const range = maxP - minP || 1;
-  minP -= range * 0.08; maxP += range * 0.08;
+  let mn=Infinity, mx=-Infinity;
+  Object.values(hist).forEach(a => a.forEach(d => {
+    if (now-d.t<win) { const v=d.p/10000; if(v<mn)mn=v; if(v>mx)mx=v; }
+  }));
+  if (mn===Infinity) { mn=0; mx=100; }
+  const rng = mx-mn||1; mn-=rng*.05; mx+=rng*.05;
 
   // Grid
-  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1;
-  for (let i = 0; i <= 5; i++) {
-    const y = pad.t + (h * i / 5);
-    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + w, y); ctx.stroke();
-    ctx.fillStyle = '#444'; ctx.font = '10px monospace'; ctx.textAlign = 'right';
-    ctx.fillText('$' + (maxP - (maxP-minP)*i/5).toFixed(0), pad.l - 6, y + 4);
-  }
-  // Time axis
-  for (let s = 0; s <= 60; s += 15) {
-    const x = pad.l + (s / 60) * w;
-    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + h); ctx.stroke();
-    ctx.fillStyle = '#444'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
-    ctx.fillText(`-${60-s}s`, x, pad.t + h + 14);
+  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1;
+  for (let i=0;i<=4;i++) {
+    const y=pad.t+h*i/4;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+w,y); ctx.stroke();
+    ctx.fillStyle='#444'; ctx.font='10px monospace'; ctx.textAlign='right';
+    ctx.fillText('$'+(mx-(mx-mn)*i/4).toFixed(0), pad.l-4, y+4);
   }
 
-  // Lines + glow
-  Object.entries(SYMBOLS).forEach(([sym, cfg]) => {
-    const arr = priceHistory[sym];
-    if (!arr || arr.length < 2) return;
-
-    // Glow
-    ctx.strokeStyle = cfg.color; ctx.lineWidth = 4; ctx.globalAlpha = 0.15;
-    ctx.beginPath(); let started = false;
-    arr.forEach(d => {
-      if (now - d.t > windowMs) return;
-      const x = pad.l + ((d.t-(now-windowMs))/windowMs)*w;
-      const y = pad.t + h - ((d.price/10000-minP)/(maxP-minP))*h;
-      if (!started) { ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+  // Lines
+  Object.entries(SYM).forEach(([s,cfg]) => {
+    const a = hist[s]; if (!a||a.length<2) return;
+    ctx.strokeStyle=cfg.c; ctx.lineWidth=2; ctx.globalAlpha=.85;
+    ctx.beginPath(); let started=false;
+    a.forEach(d => {
+      if (now-d.t>win) return;
+      const x=pad.l+((d.t-(now-win))/win)*w;
+      const y=pad.t+h-((d.p/10000-mn)/(mx-mn))*h;
+      if (!started){ctx.moveTo(x,y);started=true;} else ctx.lineTo(x,y);
     });
-    ctx.stroke();
-
-    // Main line
-    ctx.lineWidth = 1.8; ctx.globalAlpha = 0.9;
-    ctx.beginPath(); started = false;
-    arr.forEach(d => {
-      if (now - d.t > windowMs) return;
-      const x = pad.l + ((d.t-(now-windowMs))/windowMs)*w;
-      const y = pad.t + h - ((d.price/10000-minP)/(maxP-minP))*h;
-      if (!started) { ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
-    });
-    ctx.stroke();
-
-    // Endpoint dot
-    if (arr.length > 0 && lastPrices[sym]) {
-      const last = arr[arr.length-1];
-      if (now - last.t < windowMs) {
-        const x = pad.l + ((last.t-(now-windowMs))/windowMs)*w;
-        const y = pad.t + h - ((last.price/10000-minP)/(maxP-minP))*h;
-        ctx.globalAlpha = 1; ctx.fillStyle = cfg.color;
-        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
-  });
-
-  // Threshold lines
-  Object.entries(SYMBOLS).forEach(([sym, cfg]) => {
-    if (!lastPrices[sym]) return;
-    const ty = pad.t + h - ((cfg.thresh/10000 - minP)/(maxP-minP))*h;
-    if (ty > pad.t && ty < pad.t+h) {
-      ctx.strokeStyle = cfg.color; ctx.globalAlpha = 0.2; ctx.lineWidth = 1;
-      ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(pad.l,ty); ctx.lineTo(pad.l+w,ty); ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    ctx.globalAlpha = 1;
+    ctx.stroke(); ctx.globalAlpha=1;
   });
 
   // Legend
-  let lx = pad.l + 5;
-  ctx.font = '11px sans-serif';
-  Object.entries(SYMBOLS).forEach(([sym, cfg]) => {
-    if (!lastPrices[sym]) return;
-    ctx.fillStyle = cfg.color;
-    ctx.beginPath(); ctx.arc(lx+4, pad.t+8, 4, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#bbb'; ctx.textAlign = 'left';
-    ctx.fillText(sym, lx + 12, pad.t + 12);
-    lx += 60;
+  let lx=pad.l+5;
+  Object.entries(SYM).forEach(([s,cfg]) => {
+    if (!prices[s]) return;
+    ctx.fillStyle=cfg.c; ctx.fillRect(lx,pad.t+2,8,8);
+    ctx.fillStyle='#aaa'; ctx.font='10px sans-serif'; ctx.textAlign='left';
+    ctx.fillText(s,lx+11,pad.t+10); lx+=55;
   });
-}
-
-// ── Trigger rate chart ──
-function drawRateChart() {
-  const canvas = document.getElementById('rateChart');
-  const ctx = canvas.getContext('2d');
-  const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width * devicePixelRatio;
-  canvas.height = rect.height * devicePixelRatio;
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-  const W = rect.width, H = rect.height;
-
-  ctx.fillStyle = '#0d0d20'; ctx.fillRect(0, 0, W, H);
-
-  const pad = {l:40, r:10, t:10, b:20};
-  const w = W-pad.l-pad.r, h = H-pad.t-pad.b;
-
-  if (rateHistory.length < 2) return;
-  const maxR = Math.max(10, ...rateHistory.map(r=>r.rate)) * 1.1;
-
-  // Grid
-  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.t + h*i/4;
-    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+w,y); ctx.stroke();
-    ctx.fillStyle='#444'; ctx.font='10px monospace'; ctx.textAlign='right';
-    ctx.fillText((maxR*(1-i/4)).toFixed(0), pad.l-4, y+4);
-  }
-
-  // Area fill
-  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t+h);
-  grad.addColorStop(0, 'rgba(0,255,136,0.3)');
-  grad.addColorStop(1, 'rgba(0,255,136,0)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.moveTo(pad.l, pad.t+h);
-  rateHistory.forEach((r,i) => {
-    const x = pad.l + (i/(rateHistory.length-1))*w;
-    const y = pad.t + h - (r.rate/maxR)*h;
-    ctx.lineTo(x,y);
-  });
-  ctx.lineTo(pad.l+w, pad.t+h);
-  ctx.closePath(); ctx.fill();
-
-  // Line
-  ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2; ctx.globalAlpha = 0.9;
-  ctx.beginPath();
-  rateHistory.forEach((r,i) => {
-    const x = pad.l + (i/(rateHistory.length-1))*w;
-    const y = pad.t + h - (r.rate/maxR)*h;
-    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  });
-  ctx.stroke(); ctx.globalAlpha = 1;
-
-  ctx.fillStyle='#555'; ctx.font='10px monospace'; ctx.textAlign='center';
-  ctx.fillText('triggers/sec over time', W/2, H-2);
-}
-
-// ── Latency histogram ──
-function drawLatencyHist() {
-  const canvas = document.getElementById('latChart');
-  const ctx = canvas.getContext('2d');
-  const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width * devicePixelRatio;
-  canvas.height = rect.height * devicePixelRatio;
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-  const W = rect.width, H = rect.height;
-
-  ctx.fillStyle = '#0d0d20'; ctx.fillRect(0, 0, W, H);
-  if (latencies.length < 5) return;
-
-  const pad = {l:35, r:10, t:5, b:18};
-  const w = W-pad.l-pad.r, h = H-pad.t-pad.b;
-
-  const mn = Math.min(...latencies), mx = Math.max(...latencies);
-  const nbins = 20;
-  const binW = (mx - mn + 1) / nbins;
-  const bins = new Array(nbins).fill(0);
-  latencies.forEach(v => {
-    const idx = Math.min(Math.floor((v - mn) / binW), nbins-1);
-    bins[idx]++;
-  });
-  const maxBin = Math.max(...bins);
-
-  const barW = w / nbins - 1;
-  bins.forEach((c, i) => {
-    const barH = maxBin > 0 ? (c/maxBin)*h : 0;
-    const x = pad.l + i*(w/nbins);
-    const grad = ctx.createLinearGradient(0, pad.t+h-barH, 0, pad.t+h);
-    grad.addColorStop(0, '#4a90d9');
-    grad.addColorStop(1, '#1a3a6e');
-    ctx.fillStyle = grad;
-    ctx.fillRect(x, pad.t+h-barH, barW, barH);
-  });
-
-  ctx.fillStyle='#555'; ctx.font='9px monospace'; ctx.textAlign='left';
-  const fmtL = v => v < 1000 ? `${v.toFixed(0)}ns` : `${(v/1000).toFixed(1)}us`;
-  ctx.fillText(fmtL(mn), pad.l, pad.t+h+12);
-  ctx.textAlign='right';
-  ctx.fillText(fmtL(mx), pad.l+w, pad.t+h+12);
-  ctx.textAlign='center';
-  ctx.fillText('latency', W/2, pad.t+h+12);
 }
 </script>
 </body>
