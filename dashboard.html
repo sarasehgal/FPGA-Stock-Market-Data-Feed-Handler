@@ -7,53 +7,62 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#0a0a1a; color:#e0e0e0; font-family:'Segoe UI',system-ui,sans-serif; overflow:hidden; height:100vh; }
 
-.grid { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto 1fr 1fr; gap:8px; padding:8px; height:100vh; }
+.grid { display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:auto 1fr 1fr; gap:8px; padding:8px; height:100vh; }
 
 /* Header */
-.header { grid-column:1/3; display:flex; justify-content:space-between; align-items:center; background:#111128; border-radius:8px; padding:8px 20px; border:1px solid #333; }
+.header { grid-column:1/4; display:flex; justify-content:space-between; align-items:center; background:#111128; border-radius:8px; padding:8px 20px; border:1px solid #333; }
 .header h1 { font-size:18px; color:#00ff88; }
 .header .status { font-size:13px; }
 .header .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; animation:pulse 1.5s infinite; }
-.dot.live { background:#00ff88; }
+.dot.live { background:#00ff88; box-shadow:0 0 8px #00ff88; }
 .dot.dead { background:#ff4444; animation:none; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
 /* Panels */
 .panel { background:#111128; border-radius:8px; border:1px solid #222; padding:12px; overflow:hidden; display:flex; flex-direction:column; }
-.panel h2 { font-size:13px; color:#888; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+.panel h2 { font-size:12px; color:#888; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; flex-shrink:0; }
+
+/* Wide panels */
+.wide { grid-column: span 2; }
 
 /* Price table */
-.price-table { width:100%; border-collapse:collapse; font-size:13px; }
-.price-table th { text-align:left; color:#666; font-weight:normal; padding:4px 8px; border-bottom:1px solid #222; }
-.price-table td { padding:5px 8px; border-bottom:1px solid #1a1a2e; }
+.price-table { width:100%; border-collapse:collapse; font-size:12px; }
+.price-table th { text-align:left; color:#555; font-weight:normal; padding:3px 6px; border-bottom:1px solid #222; font-size:11px; }
+.price-table td { padding:4px 6px; border-bottom:1px solid #1a1a2e; }
 .price-table .sym { color:#4a90d9; font-weight:600; }
 .price-table .price { font-family:'Courier New',monospace; }
-.price-table .above { color:#00ff88; }
-.price-table .below { color:#ccc; }
-.price-table .bar-cell { width:40%; }
-.bar-bg { background:#1a1a2e; border-radius:3px; height:14px; position:relative; overflow:hidden; }
+.price-table .above { color:#00ff88; text-shadow:0 0 6px rgba(0,255,136,.3); }
+.price-table .below { color:#888; }
+.price-table .bar-cell { width:35%; }
+.bar-bg { background:#1a1a2e; border-radius:3px; height:12px; position:relative; overflow:hidden; }
 .bar-fill { height:100%; border-radius:3px; transition:width .4s ease; }
 .thresh-mark { position:absolute; top:0; bottom:0; width:2px; background:#ff4444; }
+.price-table .change { font-size:11px; }
+.price-table .up { color:#00ff88; }
+.price-table .dn { color:#ff4444; }
 
 /* Trigger feed */
-.feed { flex:1; overflow-y:auto; font-family:'Courier New',monospace; font-size:12px; }
+.feed { flex:1; overflow-y:auto; font-family:'Courier New',monospace; font-size:11px; }
 .feed::-webkit-scrollbar { width:4px; }
 .feed::-webkit-scrollbar-thumb { background:#333; border-radius:2px; }
-.feed-item { padding:3px 0; border-bottom:1px solid #1a1a2e; animation:fadeIn .3s; display:flex; gap:8px; }
-.feed-item .ts { color:#555; }
-.feed-item .sym { color:#4a90d9; font-weight:bold; }
-.feed-item .price { color:#00ff88; }
-.feed-item .side { color:#ff6b6b; }
+.feed-item { padding:2px 0; border-bottom:1px solid #0d0d20; animation:fadeIn .3s; display:flex; gap:6px; }
+.feed-item .ts { color:#444; min-width:65px; }
+.feed-item .sym { color:#4a90d9; font-weight:bold; min-width:40px; }
+.feed-item .fprice { color:#00ff88; min-width:65px; }
+.feed-item .side { min-width:28px; }
+.feed-item .side.bid { color:#2ecc71; }
+.feed-item .side.ask { color:#e74c3c; }
+.feed-item .lat { color:#555; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
 
 /* Stats */
-.stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.stat-box { background:#1a1a2e; border-radius:6px; padding:10px; text-align:center; }
-.stat-box .val { font-size:24px; font-weight:700; color:#00ff88; font-family:'Courier New',monospace; }
-.stat-box .label { font-size:11px; color:#666; margin-top:2px; }
+.stat-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.stat-box { background:#1a1a2e; border-radius:6px; padding:8px; text-align:center; }
+.stat-box .val { font-size:20px; font-weight:700; color:#00ff88; font-family:'Courier New',monospace; }
+.stat-box .label { font-size:10px; color:#555; margin-top:2px; }
 
 /* Chart area */
-.chart-wrap { flex:1; position:relative; }
+.chart-wrap { flex:1; position:relative; min-height:0; }
 canvas { width:100%!important; height:100%!important; }
 </style>
 </head>
@@ -69,6 +78,8 @@ canvas { width:100%!important; height:100%!important; }
       Triggers: <strong id="trigCount">0</strong>
       &nbsp;&nbsp;|&nbsp;&nbsp;
       Rate: <strong id="trigRate">0</strong>/s
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      Latency: <strong id="trigLat">--</strong>
     </div>
   </div>
 
@@ -76,7 +87,7 @@ canvas { width:100%!important; height:100%!important; }
   <div class="panel">
     <h2>Live Prices vs Thresholds</h2>
     <table class="price-table">
-      <thead><tr><th>Symbol</th><th>Price</th><th>Threshold</th><th class="bar-cell">Level</th></tr></thead>
+      <thead><tr><th>Symbol</th><th>Price</th><th>Thresh</th><th></th><th class="bar-cell">Level</th></tr></thead>
       <tbody id="priceBody"></tbody>
     </table>
   </div>
@@ -93,16 +104,26 @@ canvas { width:100%!important; height:100%!important; }
     <div class="stat-grid">
       <div class="stat-box"><div class="val" id="statTotal">0</div><div class="label">Total Triggers</div></div>
       <div class="stat-box"><div class="val" id="statRate">0</div><div class="label">Triggers/sec</div></div>
-      <div class="stat-box"><div class="val" id="statLatAvg">—</div><div class="label">Avg Latency</div></div>
-      <div class="stat-box"><div class="val" id="statLatMin">—</div><div class="label">Min Latency</div></div>
+      <div class="stat-box"><div class="val" id="statLatAvg">--</div><div class="label">Avg Latency</div></div>
+      <div class="stat-box"><div class="val" id="statLatMin">--</div><div class="label">Min Latency</div></div>
+      <div class="stat-box"><div class="val" id="statLatMax">--</div><div class="label">Max Latency</div></div>
       <div class="stat-box"><div class="val" id="statSymbols">0</div><div class="label">Symbols Seen</div></div>
     </div>
+    <!-- Latency histogram -->
+    <h2 style="margin-top:12px">Latency Distribution</h2>
+    <div class="chart-wrap" style="max-height:120px"><canvas id="latChart"></canvas></div>
   </div>
 
   <!-- Price History Chart -->
-  <div class="panel">
-    <h2>Price History</h2>
+  <div class="panel wide">
+    <h2>Price History (60s window)</h2>
     <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  </div>
+
+  <!-- Trigger Rate Chart -->
+  <div class="panel">
+    <h2>Trigger Rate (per second)</h2>
+    <div class="chart-wrap"><canvas id="rateChart"></canvas></div>
   </div>
 </div>
 
@@ -118,16 +139,16 @@ const SYMBOLS = {
   NFLX:{thresh:650000,color:'#e84393'},
 };
 
-// State
-let trigCount = 0;
-let startTime = Date.now();
-let lastPrices = {};
-let priceHistory = {};  // sym -> [{t, price}]
+let trigCount = 0, startTime = Date.now();
+let lastPrices = {}, prevPrices = {};
+let priceHistory = {};
 let symbolsSeen = new Set();
-let recentRate = [];    // timestamps for rate calc
-let latencies = [];     // recent latency values (ns)
+let recentRate = [];
+let latencies = [];
+let rateHistory = [];      // [{t, rate}]
+let perSymbolCount = {};
 
-Object.keys(SYMBOLS).forEach(s => { priceHistory[s] = []; });
+Object.keys(SYMBOLS).forEach(s => { priceHistory[s] = []; perSymbolCount[s] = 0; });
 
 // WebSocket
 let ws;
@@ -143,26 +164,25 @@ function connect() {
     setTimeout(connect, 2000);
   };
   ws.onerror = () => ws.close();
-  ws.onmessage = (e) => {
-    try { handleTrigger(JSON.parse(e.data)); } catch(err) {}
-  };
+  ws.onmessage = (e) => { try { handleTrigger(JSON.parse(e.data)); } catch(err) {} };
 }
 connect();
 
 function handleTrigger(msg) {
-  const {sym, price, side, ts, lat_ns, lat_cycles} = msg;
+  const {sym, price, side, ts, lat_ns} = msg;
   if (!sym || !price) return;
 
   trigCount++;
   symbolsSeen.add(sym);
+  prevPrices[sym] = lastPrices[sym] || price;
   lastPrices[sym] = price;
   recentRate.push(Date.now());
-  if (lat_ns > 0) { latencies.push(lat_ns); if (latencies.length > 500) latencies.shift(); }
+  if (lat_ns > 0) { latencies.push(lat_ns); if (latencies.length > 1000) latencies.shift(); }
+  if (perSymbolCount[sym] !== undefined) perSymbolCount[sym]++;
 
-  // Price history
   if (priceHistory[sym]) {
     priceHistory[sym].push({t: Date.now(), price});
-    if (priceHistory[sym].length > 300) priceHistory[sym].shift();
+    if (priceHistory[sym].length > 500) priceHistory[sym].shift();
   }
 
   // Feed
@@ -171,130 +191,274 @@ function handleTrigger(msg) {
   div.className = 'feed-item';
   const timeStr = new Date(ts).toLocaleTimeString();
   const sideStr = side === 'a' ? 'ASK' : 'BID';
+  const sideClass = side === 'a' ? 'ask' : 'bid';
   const latStr = lat_ns > 0 ? `${(lat_ns/1000).toFixed(1)}us` : '';
-  div.innerHTML = `<span class="ts">${timeStr}</span><span class="sym">${sym}</span><span class="price">$${(price/10000).toFixed(2)}</span><span class="side">${sideStr}</span><span class="ts">${latStr}</span>`;
+  div.innerHTML = `<span class="ts">${timeStr}</span><span class="sym">${sym}</span><span class="fprice">$${(price/10000).toFixed(2)}</span><span class="side ${sideClass}">${sideStr}</span><span class="lat">${latStr}</span>`;
   feed.prepend(div);
-  while (feed.children.length > 50) feed.lastChild.remove();
+  while (feed.children.length > 80) feed.lastChild.remove();
 }
 
-// Update UI every 500ms
+// ── UI update loop ──
 setInterval(() => {
-  // Rate calc (triggers in last 5s)
   const now = Date.now();
   recentRate = recentRate.filter(t => now - t < 5000);
   const rate = (recentRate.length / 5).toFixed(1);
+
+  // Record rate history
+  rateHistory.push({t: now, rate: parseFloat(rate)});
+  if (rateHistory.length > 120) rateHistory.shift();
 
   document.getElementById('trigCount').textContent = trigCount.toLocaleString();
   document.getElementById('trigRate').textContent = rate;
   document.getElementById('statTotal').textContent = trigCount.toLocaleString();
   document.getElementById('statRate').textContent = rate;
+  document.getElementById('statSymbols').textContent = symbolsSeen.size;
+
   if (latencies.length > 0) {
     const avg = latencies.reduce((a,b)=>a+b,0)/latencies.length;
-    const min = Math.min(...latencies);
-    document.getElementById('statLatAvg').textContent = avg < 1000 ? `${avg.toFixed(0)}ns` : `${(avg/1000).toFixed(1)}us`;
-    document.getElementById('statLatMin').textContent = min < 1000 ? `${min}ns` : `${(min/1000).toFixed(1)}us`;
+    const mn = Math.min(...latencies);
+    const mx = Math.max(...latencies);
+    const fmt = v => v < 1000 ? `${v.toFixed(0)}ns` : `${(v/1000).toFixed(1)}us`;
+    document.getElementById('statLatAvg').textContent = fmt(avg);
+    document.getElementById('statLatMin').textContent = fmt(mn);
+    document.getElementById('statLatMax').textContent = fmt(mx);
+    document.getElementById('trigLat').textContent = fmt(avg);
   }
-  document.getElementById('statSymbols').textContent = symbolsSeen.size;
 
   // Price table
   const body = document.getElementById('priceBody');
   body.innerHTML = '';
   Object.entries(SYMBOLS).forEach(([sym, cfg]) => {
     const p = lastPrices[sym] || 0;
+    const pp = prevPrices[sym] || p;
     const pct = Math.min(p / (cfg.thresh * 1.5) * 100, 100);
     const threshPct = Math.min(cfg.thresh / (cfg.thresh * 1.5) * 100, 100);
     const above = p >= cfg.thresh;
+    const diff = p - pp;
+    const diffStr = diff >= 0 ? `+${(diff/10000).toFixed(2)}` : `${(diff/10000).toFixed(2)}`;
+    const diffClass = diff >= 0 ? 'up' : 'dn';
+    const cnt = perSymbolCount[sym] || 0;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="sym">${sym}</td>
+      <td class="sym">${sym} <span style="color:#444;font-size:10px">(${cnt})</span></td>
       <td class="price ${above?'above':'below'}">$${(p/10000).toFixed(2)}</td>
-      <td class="price" style="color:#ff6b6b">$${(cfg.thresh/10000).toFixed(2)}</td>
+      <td class="price" style="color:#ff6b6b;font-size:11px">$${(cfg.thresh/10000).toFixed(0)}</td>
+      <td class="change ${diffClass}">${diffStr}</td>
       <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${above?'#00ff88':cfg.color}"></div><div class="thresh-mark" style="left:${threshPct}%"></div></div></td>`;
     body.appendChild(tr);
   });
 
-  // Chart
-  drawChart();
+  drawPriceChart();
+  drawRateChart();
+  drawLatencyHist();
 }, 500);
 
-// Simple canvas chart
-function drawChart() {
+// ── Price history chart ──
+function drawPriceChart() {
   const canvas = document.getElementById('chart');
   const ctx = canvas.getContext('2d');
   const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const W = rect.width, H = rect.height;
 
-  ctx.fillStyle = '#111128';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0d0d20';
+  ctx.fillRect(0, 0, W, H);
 
-  const now = Date.now();
-  const windowMs = 60000; // 60s window
-  const pad = {l:50, r:10, t:10, b:25};
-  const w = canvas.width - pad.l - pad.r;
-  const h = canvas.height - pad.t - pad.b;
+  const now = Date.now(), windowMs = 60000;
+  const pad = {l:55, r:15, t:20, b:25};
+  const w = W - pad.l - pad.r, h = H - pad.t - pad.b;
 
-  // Find price range across all visible data
   let minP = Infinity, maxP = -Infinity;
-  Object.entries(priceHistory).forEach(([sym, arr]) => {
-    arr.forEach(d => {
-      if (now - d.t < windowMs) {
-        const dollars = d.price / 10000;
-        if (dollars < minP) minP = dollars;
-        if (dollars > maxP) maxP = dollars;
-      }
-    });
+  Object.values(priceHistory).forEach(arr => {
+    arr.forEach(d => { if (now - d.t < windowMs) { const v=d.price/10000; if(v<minP)minP=v; if(v>maxP)maxP=v; }});
   });
   if (minP === Infinity) { minP = 0; maxP = 100; }
   const range = maxP - minP || 1;
-  minP -= range * 0.05;
-  maxP += range * 0.05;
+  minP -= range * 0.08; maxP += range * 0.08;
 
-  // Grid lines
-  ctx.strokeStyle = '#222';
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.t + (h * i / 4);
+  // Grid
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.t + (h * i / 5);
     ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + w, y); ctx.stroke();
-    ctx.fillStyle = '#555';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'right';
-    const val = maxP - (maxP - minP) * i / 4;
-    ctx.fillText('$' + val.toFixed(0), pad.l - 4, y + 4);
+    ctx.fillStyle = '#444'; ctx.font = '10px monospace'; ctx.textAlign = 'right';
+    ctx.fillText('$' + (maxP - (maxP-minP)*i/5).toFixed(0), pad.l - 6, y + 4);
+  }
+  // Time axis
+  for (let s = 0; s <= 60; s += 15) {
+    const x = pad.l + (s / 60) * w;
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + h); ctx.stroke();
+    ctx.fillStyle = '#444'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(`-${60-s}s`, x, pad.t + h + 14);
   }
 
-  // Draw lines per symbol
+  // Lines + glow
   Object.entries(SYMBOLS).forEach(([sym, cfg]) => {
     const arr = priceHistory[sym];
     if (!arr || arr.length < 2) return;
-    ctx.strokeStyle = cfg.color;
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    let started = false;
+
+    // Glow
+    ctx.strokeStyle = cfg.color; ctx.lineWidth = 4; ctx.globalAlpha = 0.15;
+    ctx.beginPath(); let started = false;
     arr.forEach(d => {
       if (now - d.t > windowMs) return;
-      const x = pad.l + ((d.t - (now - windowMs)) / windowMs) * w;
-      const y = pad.t + h - ((d.price / 10000 - minP) / (maxP - minP)) * h;
-      if (!started) { ctx.moveTo(x, y); started = true; }
-      else ctx.lineTo(x, y);
+      const x = pad.l + ((d.t-(now-windowMs))/windowMs)*w;
+      const y = pad.t + h - ((d.price/10000-minP)/(maxP-minP))*h;
+      if (!started) { ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
     });
     ctx.stroke();
+
+    // Main line
+    ctx.lineWidth = 1.8; ctx.globalAlpha = 0.9;
+    ctx.beginPath(); started = false;
+    arr.forEach(d => {
+      if (now - d.t > windowMs) return;
+      const x = pad.l + ((d.t-(now-windowMs))/windowMs)*w;
+      const y = pad.t + h - ((d.price/10000-minP)/(maxP-minP))*h;
+      if (!started) { ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    // Endpoint dot
+    if (arr.length > 0 && lastPrices[sym]) {
+      const last = arr[arr.length-1];
+      if (now - last.t < windowMs) {
+        const x = pad.l + ((last.t-(now-windowMs))/windowMs)*w;
+        const y = pad.t + h - ((last.price/10000-minP)/(maxP-minP))*h;
+        ctx.globalAlpha = 1; ctx.fillStyle = cfg.color;
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  });
+
+  // Threshold lines
+  Object.entries(SYMBOLS).forEach(([sym, cfg]) => {
+    if (!lastPrices[sym]) return;
+    const ty = pad.t + h - ((cfg.thresh/10000 - minP)/(maxP-minP))*h;
+    if (ty > pad.t && ty < pad.t+h) {
+      ctx.strokeStyle = cfg.color; ctx.globalAlpha = 0.2; ctx.lineWidth = 1;
+      ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(pad.l,ty); ctx.lineTo(pad.l+w,ty); ctx.stroke();
+      ctx.setLineDash([]);
+    }
     ctx.globalAlpha = 1;
   });
 
   // Legend
   let lx = pad.l + 5;
-  ctx.font = '10px sans-serif';
+  ctx.font = '11px sans-serif';
   Object.entries(SYMBOLS).forEach(([sym, cfg]) => {
     if (!lastPrices[sym]) return;
     ctx.fillStyle = cfg.color;
-    ctx.fillRect(lx, pad.t + 2, 10, 10);
-    ctx.fillStyle = '#aaa';
-    ctx.textAlign = 'left';
-    ctx.fillText(sym, lx + 13, pad.t + 11);
-    lx += 55;
+    ctx.beginPath(); ctx.arc(lx+4, pad.t+8, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#bbb'; ctx.textAlign = 'left';
+    ctx.fillText(sym, lx + 12, pad.t + 12);
+    lx += 60;
   });
+}
+
+// ── Trigger rate chart ──
+function drawRateChart() {
+  const canvas = document.getElementById('rateChart');
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const W = rect.width, H = rect.height;
+
+  ctx.fillStyle = '#0d0d20'; ctx.fillRect(0, 0, W, H);
+
+  const pad = {l:40, r:10, t:10, b:20};
+  const w = W-pad.l-pad.r, h = H-pad.t-pad.b;
+
+  if (rateHistory.length < 2) return;
+  const maxR = Math.max(10, ...rateHistory.map(r=>r.rate)) * 1.1;
+
+  // Grid
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + h*i/4;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+w,y); ctx.stroke();
+    ctx.fillStyle='#444'; ctx.font='10px monospace'; ctx.textAlign='right';
+    ctx.fillText((maxR*(1-i/4)).toFixed(0), pad.l-4, y+4);
+  }
+
+  // Area fill
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t+h);
+  grad.addColorStop(0, 'rgba(0,255,136,0.3)');
+  grad.addColorStop(1, 'rgba(0,255,136,0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t+h);
+  rateHistory.forEach((r,i) => {
+    const x = pad.l + (i/(rateHistory.length-1))*w;
+    const y = pad.t + h - (r.rate/maxR)*h;
+    ctx.lineTo(x,y);
+  });
+  ctx.lineTo(pad.l+w, pad.t+h);
+  ctx.closePath(); ctx.fill();
+
+  // Line
+  ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2; ctx.globalAlpha = 0.9;
+  ctx.beginPath();
+  rateHistory.forEach((r,i) => {
+    const x = pad.l + (i/(rateHistory.length-1))*w;
+    const y = pad.t + h - (r.rate/maxR)*h;
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke(); ctx.globalAlpha = 1;
+
+  ctx.fillStyle='#555'; ctx.font='10px monospace'; ctx.textAlign='center';
+  ctx.fillText('triggers/sec over time', W/2, H-2);
+}
+
+// ── Latency histogram ──
+function drawLatencyHist() {
+  const canvas = document.getElementById('latChart');
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const W = rect.width, H = rect.height;
+
+  ctx.fillStyle = '#0d0d20'; ctx.fillRect(0, 0, W, H);
+  if (latencies.length < 5) return;
+
+  const pad = {l:35, r:10, t:5, b:18};
+  const w = W-pad.l-pad.r, h = H-pad.t-pad.b;
+
+  const mn = Math.min(...latencies), mx = Math.max(...latencies);
+  const nbins = 20;
+  const binW = (mx - mn + 1) / nbins;
+  const bins = new Array(nbins).fill(0);
+  latencies.forEach(v => {
+    const idx = Math.min(Math.floor((v - mn) / binW), nbins-1);
+    bins[idx]++;
+  });
+  const maxBin = Math.max(...bins);
+
+  const barW = w / nbins - 1;
+  bins.forEach((c, i) => {
+    const barH = maxBin > 0 ? (c/maxBin)*h : 0;
+    const x = pad.l + i*(w/nbins);
+    const grad = ctx.createLinearGradient(0, pad.t+h-barH, 0, pad.t+h);
+    grad.addColorStop(0, '#4a90d9');
+    grad.addColorStop(1, '#1a3a6e');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, pad.t+h-barH, barW, barH);
+  });
+
+  ctx.fillStyle='#555'; ctx.font='9px monospace'; ctx.textAlign='left';
+  const fmtL = v => v < 1000 ? `${v.toFixed(0)}ns` : `${(v/1000).toFixed(1)}us`;
+  ctx.fillText(fmtL(mn), pad.l, pad.t+h+12);
+  ctx.textAlign='right';
+  ctx.fillText(fmtL(mx), pad.l+w, pad.t+h+12);
+  ctx.textAlign='center';
+  ctx.fillText('latency', W/2, pad.t+h+12);
 }
 </script>
 </body>
