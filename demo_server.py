@@ -1,35 +1,19 @@
 #!/usr/bin/env python3
-"""
-demo_server.py — FPGA trigger relay server.
-
-Reads triggers from FPGA via COM4 UART at 115200 baud,
-broadcasts each as JSON over WebSocket to connected dashboards.
-
-Usage:
-    python demo_server.py
-    python demo_server.py --port COM5 --ws-port 8765 --http-port 8080
-"""
-import asyncio
-import json
-import time
-import threading
-import argparse
-import http.server
-import functools
+"""demo_server.py — FPGA trigger relay: UART → WebSocket + HTTP."""
+import asyncio, json, time, threading, argparse, http.server, functools, os
 from collections import deque
-
 import serial
 import websockets
 
-# ── Globals ──────────────────────────────────────────────────────────
-clients = set()
-history = deque(maxlen=200)
-stats = {"total": 0, "start": time.time()}
+# ── Shared state ─────────────────────────────────────────────────────
+trigger_queue = deque(maxlen=5000)  # thread-safe append from UART reader
+write_idx = 0  # monotonic counter of total messages added
 
-# ── UART reader (runs in background thread) ──────────────────────────
-def uart_reader(port, baud, loop):
+# ── UART reader thread ──────────────────────────────────────────────
+def uart_reader(port, baud):
+    global write_idx
     ser = serial.Serial(port, baud, timeout=1)
-    print(f"[UART] Opened {port} at {baud}")
+    print(f"[UART] Opened {port} at {baud}", flush=True)
     buf = b""
     while True:
         chunk = ser.read(256)
@@ -42,12 +26,10 @@ def uart_reader(port, baud, loop):
             if text.startswith("TRIG:"):
                 msg = parse_trigger(text)
                 if msg:
-                    stats["total"] += 1
-                    history.append(msg)
-                    asyncio.run_coroutine_threadsafe(broadcast(msg), loop)
+                    trigger_queue.append(msg)
+                    write_idx += 1
 
 def parse_trigger(line):
-    """Parse 'TRIG:AAPL:0x0001E240:b:008E' → dict"""
     try:
         parts = line.split(":")
         if len(parts) < 4:
@@ -56,90 +38,71 @@ def parse_trigger(line):
         price = int(parts[2], 16)
         reason_code = parts[3]
         latency_cycles = int(parts[4], 16) if len(parts) > 4 else 0
-        latency_ns = latency_cycles * 10  # 100 MHz = 10ns per cycle
-        # Reason codes: T=bid_thresh, t=ask_thresh, E=ema_bid, e=ema_ask, S=spread
-        reason_map = {"T":"THRESH","t":"THRESH","E":"EMA","e":"EMA","S":"SPREAD","b":"THRESH","a":"THRESH"}
-        side_map = {"T":"bid","t":"ask","E":"bid","e":"ask","S":"spread","b":"bid","a":"ask"}
+        latency_ns = latency_cycles * 10
+        reason_map = {"T":"THRESH","t":"THRESH","E":"EMA","e":"EMA","S":"SPREAD"}
+        side_map = {"T":"bid","t":"ask","E":"bid","e":"ask","S":"spread"}
         return {
-            "sym": sym,
-            "price": price,
-            "side": side_map.get(reason_code, "?"),
-            "reason": reason_map.get(reason_code, "?"),
-            "reason_code": reason_code,
+            "sym": sym, "price": price,
+            "side": side_map.get(reason_code, "bid"),
+            "reason": reason_map.get(reason_code, "THRESH"),
             "lat_ns": latency_ns,
-            "lat_cycles": latency_cycles,
             "ts": int(time.time() * 1000),
         }
     except Exception:
         return None
 
-# ── WebSocket server ─────────────────────────────────────────────────
-async def broadcast(msg):
-    if not clients:
-        return
-    data = json.dumps(msg)
-    dead = set()
-    for ws in clients:
-        try:
-            await ws.send(data)
-        except websockets.exceptions.ConnectionClosed:
-            dead.add(ws)
-    clients -= dead
-
+# ── WebSocket handler — each client polls the shared deque ───────────
 async def ws_handler(ws):
-    clients.add(ws)
     remote = ws.remote_address
-    print(f"[WS] Client connected: {remote}")
-    # Send recent history on connect
-    for msg in list(history)[-20:]:
+    print(f"[WS] Client connected: {remote}", flush=True)
+
+    # Send last 20 from history
+    items = list(trigger_queue)
+    for msg in items[-20:]:
         try:
             await ws.send(json.dumps(msg))
         except Exception:
-            break
-    try:
-        async for _ in ws:
-            pass  # ignore client messages
-    finally:
-        clients.discard(ws)
-        print(f"[WS] Client disconnected: {remote}")
+            return
 
-# ── HTTP server for dashboard.html ───────────────────────────────────
-def run_http(directory, port):
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=directory)
-    httpd = http.server.HTTPServer(("", port), handler)
-    print(f"[HTTP] Serving {directory} on http://localhost:{port}")
-    httpd.serve_forever()
+    # Track where this client is in the stream
+    seen = write_idx
+
+    try:
+        while True:
+            current_idx = write_idx
+            if current_idx > seen:
+                # New messages available — send them
+                items = list(trigger_queue)
+                # Send the last (current_idx - seen) items, capped to avoid huge bursts
+                n_new = min(current_idx - seen, 50)
+                for msg in items[-n_new:]:
+                    await ws.send(json.dumps(msg))
+                seen = current_idx
+            await asyncio.sleep(0.1)  # 100ms poll — fast enough for live feel
+    except websockets.exceptions.ConnectionClosed:
+        pass
+    finally:
+        print(f"[WS] Client disconnected: {remote}", flush=True)
 
 # ── Main ─────────────────────────────────────────────────────────────
 async def main_async(args):
-    loop = asyncio.get_event_loop()
+    # UART reader thread
+    threading.Thread(target=uart_reader, args=(args.port, args.baud), daemon=True).start()
 
-    # Start UART reader thread
-    uart_thread = threading.Thread(
-        target=uart_reader, args=(args.port, args.baud, loop), daemon=True)
-    uart_thread.start()
+    # WebSocket server
+    print(f"[WS] Listening on ws://localhost:{args.ws_port}", flush=True)
+    print(f"\n  Dashboard: http://localhost:{args.http_port}/dashboard.html\n", flush=True)
 
-    # Start HTTP server thread
-    import os
-    http_dir = os.path.dirname(os.path.abspath(__file__))
-    http_thread = threading.Thread(
-        target=run_http, args=(http_dir, args.http_port), daemon=True)
-    http_thread.start()
-
-    # Start WebSocket server
-    print(f"[WS] Listening on ws://localhost:{args.ws_port}")
     async with websockets.serve(ws_handler, "localhost", args.ws_port):
-        print(f"\n  Dashboard: http://localhost:{args.http_port}/dashboard.html\n")
         await asyncio.Future()  # run forever
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--port", default="COM4", help="Serial port")
+    ap.add_argument("--port", default="COM4")
     ap.add_argument("--baud", type=int, default=115200)
     ap.add_argument("--ws-port", type=int, default=8765)
     ap.add_argument("--http-port", type=int, default=8080)
     args = ap.parse_args()
-
     try:
         asyncio.run(main_async(args))
     except KeyboardInterrupt:
