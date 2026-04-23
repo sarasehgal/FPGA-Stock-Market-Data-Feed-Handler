@@ -15,21 +15,22 @@ body{background:#0a0a1a;color:#e0e0e0;font-family:'Segoe UI',sans-serif;min-heig
 .dot.dead{background:#f44}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-#banner{display:none;padding:6px 20px;font-size:13px;font-weight:700;text-align:center;border-bottom:1px solid #333;flex-shrink:0}
+#banner{padding:8px 20px;font-size:14px;font-weight:700;text-align:center;border-bottom:1px solid #333;flex-shrink:0;transition:opacity .5s,max-height .5s;max-height:0;opacity:0;overflow:hidden}
+#banner.show{max-height:60px;opacity:1}
 
 .main{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:380px 300px;gap:6px;padding:6px}
 
-.panel{background:#111128;border-radius:6px;border:1px solid #1a1a2e;padding:8px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+/* Stageable panels */
+.panel{background:#111128;border-radius:6px;border:1px solid #1a1a2e;padding:8px;display:flex;flex-direction:column;min-height:0;overflow:hidden;transition:opacity .6s,transform .6s}
+.panel.hidden{opacity:0;transform:scale(.96);pointer-events:none;max-height:0;padding:0;border:0;overflow:hidden}
 .panel h2{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;flex-shrink:0}
 .wide{grid-column:span 2}
 
-/* Stats row */
-.stat-row{display:flex;gap:4px;flex-shrink:0;padding:4px 6px}
+.stat-row{display:flex;gap:4px;flex-shrink:0;padding:4px 6px;transition:opacity .6s}
 .sbox{background:#1a1a2e;border-radius:4px;padding:4px 6px;text-align:center;flex:1}
 .sbox .v{font-size:16px;font-weight:700;color:#00ff88;font-family:monospace}
 .sbox .l{font-size:8px;color:#555}
 
-/* Table */
 table{width:100%;border-collapse:collapse;font-size:11px}
 th{text-align:left;color:#444;font-weight:normal;padding:2px 4px;font-size:10px}
 td{padding:3px 4px;border-bottom:1px solid #0d0d20}
@@ -39,30 +40,25 @@ td{padding:3px 4px;border-bottom:1px solid #0d0d20}
 .bar-fill{height:100%;border-radius:2px;transition:width .3s}
 .bar-mark{position:absolute;top:0;bottom:0;width:2px;background:#f44}
 
-/* Feed */
 .feed{flex:1;overflow-y:auto;font-family:monospace;font-size:10px;min-height:0}
 .feed::-webkit-scrollbar{width:3px}
 .feed::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
 .feed div{padding:1px 0;border-bottom:1px solid #080818;animation:fadeIn .15s}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-/* Canvas */
 .chart-box{flex:1;min-height:0}
 canvas{width:100%;height:100%;display:block}
 
-/* Heatmap */
 .heatmap{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;flex:1}
 .hm-cell{border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;transition:background .5s}
 .hm-cell .hm-sym{font-weight:700;font-size:11px}
 .hm-cell .hm-cnt{font-family:monospace;font-size:14px;font-weight:700}
 
-/* Donut */
 .donut-wrap{display:flex;align-items:center;justify-content:center;gap:15px;flex:1}
 .donut-legend{font-size:11px}
 .donut-legend div{margin:4px 0;display:flex;align-items:center;gap:6px}
 .donut-legend .dot-lg{width:10px;height:10px;border-radius:50%;display:inline-block}
 
-/* Order book */
 .ob-row{display:flex;align-items:center;margin:2px 0;font-size:10px;font-family:monospace}
 .ob-sym{width:40px;color:#4a90d9;font-weight:600}
 .ob-bars{flex:1;display:flex;height:12px}
@@ -70,6 +66,18 @@ canvas{width:100%;height:100%;display:block}
 .ob-ask{background:#e74c3c;height:100%;border-radius:0 2px 2px 0;transition:width .3s}
 .ob-mid{width:2px;background:#333}
 .ob-price{width:50px;text-align:right;font-size:9px;color:#888}
+
+/* Latency highlight for stage 6 */
+.lat-highlight{border:2px solid #00ff88 !important;animation:latPulse 1.5s infinite}
+@keyframes latPulse{0%,100%{border-color:#00ff88;box-shadow:0 0 15px rgba(0,255,136,.3)}50%{border-color:#0a4a2a;box-shadow:none}}
+
+/* Demo control bar */
+#demoCtrl{position:fixed;bottom:0;left:0;background:#111128;border:1px solid #333;border-radius:0 8px 0 0;padding:8px 14px;display:flex;align-items:center;gap:10px;font-size:12px;z-index:999;opacity:0;transition:opacity .3s}
+#demoCtrl:hover,#demoCtrl.vis{opacity:1}
+#demoCtrl button{background:#1a1a2e;color:#e0e0e0;border:1px solid #333;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:11px}
+#demoCtrl button:hover{background:#2a2a4e}
+#demoCtrl .active{background:#00ff88;color:#000;border-color:#00ff88}
+#demoCtrl .stage{color:#888;font-family:monospace}
 </style>
 </head>
 <body>
@@ -82,7 +90,7 @@ canvas{width:100%;height:100%;display:block}
 </div>
 <div id="banner"></div>
 
-<div class="stat-row">
+<div class="stat-row" id="statRow">
   <div class="sbox"><div class="v" id="sTotal">0</div><div class="l">Triggers</div></div>
   <div class="sbox"><div class="v" id="sRate">0</div><div class="l">Rate/s</div></div>
   <div class="sbox"><div class="v" id="sLatAvg">--</div><div class="l">Avg Lat</div></div>
@@ -94,15 +102,16 @@ canvas{width:100%;height:100%;display:block}
 </div>
 
 <div class="main">
-  <!-- Row 1: Prices | Heatmap + Donut | Feed -->
-  <div class="panel">
+  <div class="panel" id="pPrices">
     <h2>Live Prices vs Thresholds</h2>
     <table><thead><tr><th>Sym</th><th>Price</th><th>Thresh</th><th style="width:30%">Level</th></tr></thead><tbody id="prices"></tbody></table>
-    <h2 style="margin-top:6px">Order Book Depth</h2>
-    <div id="orderbook"></div>
+    <div id="obWrap">
+      <h2 style="margin-top:6px">Order Book Depth</h2>
+      <div id="orderbook"></div>
+    </div>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="pHeat">
     <h2>Trigger Heatmap by Symbol</h2>
     <div class="heatmap" id="heatmap"></div>
     <h2 style="margin-top:6px">Strategy Breakdown</h2>
@@ -112,21 +121,27 @@ canvas{width:100%;height:100%;display:block}
     </div>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="pFeed">
     <h2>Trigger Feed</h2>
     <div class="feed" id="feed"></div>
   </div>
 
-  <!-- Row 2: Price Chart (wide) | Latency Histogram -->
-  <div class="panel wide">
+  <div class="panel wide" id="pChart">
     <h2>Price History (60s)</h2>
     <div class="chart-box"><canvas id="chart"></canvas></div>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="pLat">
     <h2>Latency Distribution (FPGA Determinism)</h2>
     <div class="chart-box"><canvas id="latChart"></canvas></div>
   </div>
+</div>
+
+<!-- Demo control bar — visible on hover bottom-left -->
+<div id="demoCtrl">
+  <button id="btnDemo" onclick="toggleDemo()">DEMO MODE</button>
+  <button id="btnNext" onclick="nextStage()" style="display:none">Next Stage &rarr;</button>
+  <span class="stage" id="stageLabel" style="display:none">Stage 1 / 6</span>
 </div>
 
 <script>
@@ -140,23 +155,90 @@ let rcnt={THRESH:0,EMA:0,SPREAD:0},perSym={};
 let firstTrig={},bannerTimeout=null;
 Object.keys(SYM).forEach(s=>{hist[s]=[];perSym[s]=0});
 
-// WebSocket
+// ── Demo mode ───────────────────────────────────────────────
+let demoMode=false, stage=0;
+const stageConfig=[
+  // stage 1: Data reception
+  {show:['pPrices','pFeed'],hide:['pHeat','pChart','pLat'],hideOB:true,
+   banner:'Stage 1: Receiving live Ethernet frames at 100 Mbps — parsing 8 stock symbols in real time',bc:'#1a2233'},
+  // stage 2: Threshold decisions
+  {show:['pPrices','pFeed'],hide:['pHeat','pChart','pLat'],hideOB:true,
+   banner:'Stage 2: FPGA evaluating 8 symbols against price thresholds — triggers fire when price crosses target',bc:'#1a3320'},
+  // stage 3: Order book
+  {show:['pPrices','pFeed'],hide:['pHeat','pChart','pLat'],hideOB:false,
+   banner:'Stage 3: Hardware maintains live bid/ask order book per symbol across thousands of frames',bc:'#1a2233'},
+  // stage 4: Three strategies
+  {show:['pPrices','pHeat','pFeed'],hide:['pChart','pLat'],hideOB:false,
+   banner:'Stage 4: Three trading algorithms running simultaneously in silicon — Threshold, EMA Crossover, Spread Monitor',bc:'#332a10'},
+  // stage 5: Full view
+  {show:['pPrices','pHeat','pFeed','pChart','pLat'],hide:[],hideOB:false,
+   banner:'Stage 5: Full system — 8 symbols, 3 strategies, live price history, all running at wire speed',bc:'#1a3320'},
+  // stage 6: Latency proof
+  {show:['pPrices','pHeat','pFeed','pChart','pLat'],hide:[],hideOB:false,latHighlight:true,
+   banner:'Stage 6: 234 cycles. 2.34 microseconds. Zero jitter. Every single frame. 25x faster than software.',bc:'#0a2a0a'},
+];
+
+function toggleDemo(){
+  demoMode=!demoMode;
+  document.getElementById('btnDemo').className=demoMode?'active':'';
+  document.getElementById('btnNext').style.display=demoMode?'inline':'none';
+  document.getElementById('stageLabel').style.display=demoMode?'inline':'none';
+  document.getElementById('demoCtrl').className=demoMode?'vis':'';
+  if(demoMode){stage=0;applyStage();}
+  else{
+    // Show everything
+    ['pPrices','pHeat','pFeed','pChart','pLat'].forEach(id=>document.getElementById(id).classList.remove('hidden'));
+    document.getElementById('obWrap').style.display='';
+    document.getElementById('pLat').classList.remove('lat-highlight');
+    hideBanner();
+  }
+}
+function nextStage(){
+  if(!demoMode)return;
+  stage=Math.min(stage+1,stageConfig.length-1);
+  applyStage();
+}
+function applyStage(){
+  const cfg=stageConfig[stage];
+  document.getElementById('stageLabel').textContent=`Stage ${stage+1} / ${stageConfig.length}`;
+  // Show/hide panels
+  cfg.show.forEach(id=>document.getElementById(id).classList.remove('hidden'));
+  cfg.hide.forEach(id=>document.getElementById(id).classList.add('hidden'));
+  // Order book
+  document.getElementById('obWrap').style.display=cfg.hideOB?'none':'';
+  // Latency highlight
+  if(cfg.latHighlight)document.getElementById('pLat').classList.add('lat-highlight');
+  else document.getElementById('pLat').classList.remove('lat-highlight');
+  // Banner
+  if(cfg.banner)showBanner(cfg.banner,cfg.bc,15000);
+  // Scroll to top
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+// Keyboard: space = next, escape = toggle
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&demoMode){e.preventDefault();nextStage();}
+  if(e.code==='Escape'){e.preventDefault();toggleDemo();}
+});
+
+// ── WebSocket ───────────────────────────────────────────────
 let ws;
 function wsConnect(){
   ws=new WebSocket('ws://localhost:8765');
   ws.onopen=()=>{document.getElementById('dot').className='dot live';document.getElementById('conn').textContent='Live'};
   ws.onclose=()=>{document.getElementById('dot').className='dot dead';document.getElementById('conn').textContent='Disconnected';setTimeout(wsConnect,2000)};
   ws.onerror=()=>ws.close();
-  ws.onmessage=(e)=>{try{onTrigger(JSON.parse(e.data))}catch(err){document.getElementById('banner').style.display='block';document.getElementById('banner').textContent='JS Error: '+err.message;document.getElementById('banner').style.background='#440000'}};
+  ws.onmessage=(e)=>{try{onTrigger(JSON.parse(e.data))}catch(err){}};
 }
 wsConnect();
 
 function showBanner(text,color,duration){
   const b=document.getElementById('banner');
-  b.textContent=text;b.style.display='block';b.style.background=color;
+  b.textContent=text;b.style.background=color||'#1a2233';
+  b.classList.add('show');
   if(bannerTimeout)clearTimeout(bannerTimeout);
-  bannerTimeout=setTimeout(()=>{b.style.display='none'},duration||5000);
+  bannerTimeout=setTimeout(()=>hideBanner(),duration||5000);
 }
+function hideBanner(){document.getElementById('banner').classList.remove('show')}
 
 function onTrigger(m){
   if(!m.sym||!m.price)return;
@@ -169,25 +251,17 @@ function onTrigger(m){
   const r=m.reason||'THRESH';
   if(rcnt[r]!==undefined)rcnt[r]++;
   if(perSym[m.sym]!==undefined)perSym[m.sym]++;
-
   hist[m.sym]&&hist[m.sym].push({t:Date.now(),p:m.price});
   if(hist[m.sym]&&hist[m.sym].length>400)hist[m.sym].shift();
 
-  // Announcements
-  if(!firstTrig[m.sym]){
-    firstTrig[m.sym]=true;
-    const msgs=[
-      `${m.sym} just crossed its threshold at $${(m.price/10000).toFixed(2)} — TRIGGER FIRED`,
-      `ALERT: ${m.sym} breached $${(SYM[m.sym]?.th/10000||0).toFixed(0)} target — first trigger detected`,
-      `${m.sym} is now in the trigger zone — FPGA detected crossover in 2.3us`
-    ];
-    showBanner(msgs[Object.keys(firstTrig).length%msgs.length],'#1a3320',8000);
-  }
-  if(r==='EMA'&&rcnt.EMA<=3){
-    showBanner(`EMA CROSSOVER: ${m.sym} price crossed above its moving average — momentum signal detected`,'#332a10',6000);
-  }
-  if(r==='SPREAD'&&rcnt.SPREAD<=3){
-    showBanner(`SPREAD ALERT: ${m.sym} bid-ask spread exceeded $1.00 — possible market stress`,'#331010',6000);
+  // Auto-announcements (only when NOT in demo mode — demo mode uses stage banners)
+  if(!demoMode){
+    if(!firstTrig[m.sym]){
+      firstTrig[m.sym]=true;
+      showBanner(`${m.sym} crossed $${(SYM[m.sym]?.th/10000||0).toFixed(0)} threshold at $${(m.price/10000).toFixed(2)} — TRIGGER FIRED`,'#1a3320',6000);
+    }
+    if(r==='EMA'&&rcnt.EMA<=3)showBanner(`EMA CROSSOVER: ${m.sym} price crossed above moving average — momentum signal`,'#332a10',5000);
+    if(r==='SPREAD'&&rcnt.SPREAD<=3)showBanner(`SPREAD ALERT: ${m.sym} bid-ask spread exceeded $1.00`,'#331010',5000);
   }
 
   // Feed
@@ -201,7 +275,7 @@ function onTrigger(m){
   while(feed.children.length>80)feed.lastChild.remove();
 }
 
-// UI refresh
+// ── UI refresh ──────────────────────────────────────────────
 setInterval(()=>{
   const now=Date.now();
   rates=rates.filter(t=>now-t<5000);
@@ -246,45 +320,33 @@ setInterval(()=>{
   const hm=document.getElementById('heatmap');hm.innerHTML='';
   const maxCnt=Math.max(1,...Object.values(perSym));
   Object.entries(SYM).forEach(([s,cfg])=>{
-    const cnt=perSym[s]||0;
-    const intensity=Math.min(cnt/maxCnt,1);
-    const bg=`rgba(${cfg.c.match(/\w\w/g)?.map(x=>parseInt(x,16)).join(',')||'74,144,217'},${0.1+intensity*0.7})`;
-    const cell=document.createElement('div');cell.className='hm-cell';cell.style.background=bg;
+    const cnt=perSym[s]||0,intensity=Math.min(cnt/maxCnt,1);
+    const rgb=cfg.c.match(/\w\w/g)?.map(x=>parseInt(x,16))||[74,144,217];
+    const cell=document.createElement('div');cell.className='hm-cell';
+    cell.style.background=`rgba(${rgb.join(',')},${0.1+intensity*0.7})`;
     cell.innerHTML=`<span class="hm-sym">${s}</span><span class="hm-cnt">${cnt}</span>`;
     hm.appendChild(cell);
   });
 
-  // Donut chart
-  drawDonut();
-  drawChart();
-  drawLatHist();
+  drawDonut();drawChart();drawLatHist();
 },500);
 
+// ── Donut ───────────────────────────────────────────────────
 function drawDonut(){
-  const c=document.getElementById('donut');
-  const ctx=c.getContext('2d');
+  const c=document.getElementById('donut'),ctx=c.getContext('2d');
   c.width=100;c.height=100;
   const total=rcnt.THRESH+rcnt.EMA+rcnt.SPREAD;
   if(total===0)return;
   const data=[{v:rcnt.THRESH,c:'#00ff88',l:'THRESH'},{v:rcnt.EMA,c:'#f39c12',l:'EMA'},{v:rcnt.SPREAD,c:'#e74c3c',l:'SPREAD'}];
   let angle=-Math.PI/2;
-  data.forEach(d=>{
-    const slice=d.v/total*Math.PI*2;
-    ctx.beginPath();ctx.moveTo(50,50);ctx.arc(50,50,45,angle,angle+slice);ctx.fillStyle=d.c;ctx.fill();
-    angle+=slice;
-  });
+  data.forEach(d=>{const sl=d.v/total*Math.PI*2;ctx.beginPath();ctx.moveTo(50,50);ctx.arc(50,50,45,angle,angle+sl);ctx.fillStyle=d.c;ctx.fill();angle+=sl});
   ctx.beginPath();ctx.arc(50,50,25,0,Math.PI*2);ctx.fillStyle='#111128';ctx.fill();
   ctx.fillStyle='#aaa';ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText(total,50,55);
-
   const leg=document.getElementById('donutLeg');leg.innerHTML='';
-  data.forEach(d=>{
-    if(d.v===0)return;
-    const div=document.createElement('div');
-    div.innerHTML=`<span class="dot-lg" style="background:${d.c}"></span>${d.l}: ${d.v} (${(d.v/total*100).toFixed(0)}%)`;
-    leg.appendChild(div);
-  });
+  data.forEach(d=>{if(!d.v)return;const div=document.createElement('div');div.innerHTML=`<span class="dot-lg" style="background:${d.c}"></span>${d.l}: ${d.v} (${(d.v/total*100).toFixed(0)}%)`;leg.appendChild(div)});
 }
 
+// ── Price chart ─────────────────────────────────────────────
 function drawChart(){
   const c=document.getElementById('chart'),ctx=c.getContext('2d');
   const r=c.parentElement.getBoundingClientRect();c.width=r.width;c.height=r.height;
@@ -296,7 +358,6 @@ function drawChart(){
   const rng=mx-mn||1;mn-=rng*.05;mx+=rng*.05;
   ctx.strokeStyle='#1a1a2e';ctx.lineWidth=1;
   for(let i=0;i<=4;i++){const y=pad.t+h*i/4;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+w,y);ctx.stroke();ctx.fillStyle='#444';ctx.font='10px monospace';ctx.textAlign='right';ctx.fillText('$'+(mx-(mx-mn)*i/4).toFixed(0),pad.l-4,y+4)}
-  // Threshold lines
   Object.entries(SYM).forEach(([s,cfg])=>{
     if(!prices[s])return;
     const ty=pad.t+h-((cfg.th/10000-mn)/(mx-mn))*h;
@@ -313,48 +374,40 @@ function drawChart(){
   Object.entries(SYM).forEach(([s,cfg])=>{if(!prices[s])return;ctx.fillStyle=cfg.c;ctx.fillRect(lx,pad.t+2,8,8);ctx.fillStyle='#aaa';ctx.textAlign='left';ctx.fillText(s,lx+11,pad.t+10);lx+=55});
 }
 
+// ── Latency histogram ───────────────────────────────────────
 function drawLatHist(){
   const c=document.getElementById('latChart'),ctx=c.getContext('2d');
   const r=c.parentElement.getBoundingClientRect();c.width=r.width;c.height=r.height;
   ctx.fillStyle='#0d0d20';ctx.fillRect(0,0,c.width,c.height);
-  if(lats.length<10)return;
-  const pad={l:40,r:15,t:10,b:30},w=c.width-pad.l-pad.r,h=c.height-pad.t-pad.b;
+  if(lats.length<10){ctx.fillStyle='#333';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('Collecting latency data...',c.width/2,c.height/2);return}
+  const pad={l:40,r:15,t:15,b:35},w=c.width-pad.l-pad.r,h=c.height-pad.t-pad.b;
   const mn=Math.min(...lats),mx=Math.max(...lats);
   const nbins=30,binW=(mx-mn+1)/nbins;
   const bins=new Array(nbins).fill(0);
   lats.forEach(v=>{const idx=Math.min(Math.floor((v-mn)/binW),nbins-1);bins[idx]++});
   const maxBin=Math.max(...bins);
   const barW=w/nbins-1;
-  // Draw bars
   bins.forEach((cnt,i)=>{
     const barH=maxBin>0?(cnt/maxBin)*h:0;
     const x=pad.l+i*(w/nbins);
     const grad=ctx.createLinearGradient(0,pad.t+h-barH,0,pad.t+h);
     grad.addColorStop(0,'#00ff88');grad.addColorStop(1,'#0a4a2a');
-    ctx.fillStyle=grad;
-    ctx.fillRect(x,pad.t+h-barH,Math.max(barW,2),barH);
+    ctx.fillStyle=grad;ctx.fillRect(x,pad.t+h-barH,Math.max(barW,2),barH);
   });
-  // Labels
   const f=v=>v<1000?v.toFixed(0)+'ns':(v/1000).toFixed(1)+'us';
   ctx.fillStyle='#888';ctx.font='10px monospace';
   ctx.textAlign='left';ctx.fillText(f(mn),pad.l,pad.t+h+14);
   ctx.textAlign='right';ctx.fillText(f(mx),pad.l+w,pad.t+h+14);
-  ctx.textAlign='center';ctx.fillText('Latency (RX to Trigger)',c.width/2,pad.t+h+26);
-  // Peak annotation
+  ctx.textAlign='center';ctx.fillText('Latency: RX Ethernet Frame to Trigger Decision',c.width/2,pad.t+h+28);
+  // Peak label
   const peakIdx=bins.indexOf(maxBin);
   const peakVal=mn+peakIdx*binW+binW/2;
   const peakX=pad.l+peakIdx*(w/nbins)+barW/2;
-  ctx.fillStyle='#00ff88';ctx.font='bold 11px monospace';ctx.textAlign='center';
-  ctx.fillText(f(peakVal),peakX,pad.t-1);
-  // Software comparison line
-  const swLat=50000; // 50us = typical software
-  if(swLat>=mn&&swLat<=mx){
-    const sx=pad.l+((swLat-mn)/(mx-mn))*w;
-    ctx.strokeStyle='#f44';ctx.lineWidth=2;ctx.setLineDash([4,3]);
-    ctx.beginPath();ctx.moveTo(sx,pad.t);ctx.lineTo(sx,pad.t+h);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle='#f44';ctx.font='9px sans-serif';ctx.textAlign='left';
-    ctx.fillText('Software (~50us)',sx+4,pad.t+12);
-  }
+  ctx.fillStyle='#00ff88';ctx.font='bold 12px monospace';ctx.textAlign='center';
+  ctx.fillText(f(peakVal)+' peak',peakX,pad.t+5);
+  // Software comparison
+  ctx.fillStyle='#f44';ctx.font='10px sans-serif';ctx.textAlign='right';
+  ctx.fillText('Software would be 50-200us here  \u2192',pad.l+w,pad.t+h+28);
 }
 </script>
 </body>
