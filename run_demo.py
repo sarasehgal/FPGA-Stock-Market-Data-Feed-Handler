@@ -64,7 +64,7 @@ except Exception as e:
 if ser:
     # Send a few frames and check UART
     from scapy.all import Ether, Raw, sendp
-    seq = int(time.time()) & 0xFFFF
+    seq = 0  # start at 0; FPGA was just reprogrammed so last_seq is reset
     for i in range(20):
         seq = (seq + 1) & 0xFFFF
         payload = struct.pack('>B4sIHHB', 1, b'AAPL', 123456, 100, seq, 0)
@@ -94,7 +94,7 @@ SYMBOLS_DATA = [
     (b'AMZN', 175000), (b'GOOG', 165000), (b'META', 490000), (b'NFLX', 640000),
 ]
 prices = {s[0]: s[1] for s in SYMBOLS_DATA}
-seq = int(time.time()) & 0xFFFF
+seq = 0  # start at 0; FPGA was just reprogrammed so last_seq is reset
 total = 0
 try:
     while True:
